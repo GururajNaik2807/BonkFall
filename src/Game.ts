@@ -1,35 +1,277 @@
-import Phaser from "phaser";import{ENEMY_DEFS,UPGRADES,type Stats}from"./data";
-export type Choice={id:string;name:string;description:string;icon:string;level:number};
-export type Snapshot={hp:number;maxHp:number;xp:number;nextXp:number;level:number;time:number;kills:number;wave:number;choices:Choice[]|null;paused:boolean;mapName:string;powerLevel:number};
-export type Result={won:boolean;time:number;kills:number;level:number;power:number};
+import { Warrior } from "./Warrior";
+import { Mage } from "./Mage";
+import { Enemy } from "./Enemy";
 
-class World extends Phaser.Scene{
-  cb:(s:Snapshot)=>void; endCb:(r:Result)=>void;
-  player!:Phaser.GameObjects.Container; enemies!:Phaser.GameObjects.Container[]; projectiles!:Phaser.GameObjects.Arc[]; gems!:Phaser.GameObjects.Container[];
-  keys!:any; cursors!:Phaser.Types.Input.Keyboard.CursorKeys; stats:Stats={maxHp:120,hp:120,moveSpeed:210,damage:22,attackRate:1,attackRange:240,projectiles:1,projectileSpeed:480,pickupRadius:90,crit:.05};
-  level=1;xp=0;nextXp=35;kills=0;elapsed=0;wave=1;paused=false;ended=false;choices:Choice[]|null=null;cool=0;spawn=0;upgradeLevels:Record<string,number>={};worldW=3600;worldH=2400;playerWeapon=0;
-  constructor(cb:(s:Snapshot)=>void,end:(r:Result)=>void){super("world");this.cb=cb;this.endCb=end}
-  create(){this.physics.world.setBounds(0,0,this.worldW,this.worldH);this.drawWorld();this.player=this.makePlayer(this.worldW/2,this.worldH/2);this.cameras.main.startFollow(this.player,true,.1,.1);this.cameras.main.setBounds(0,0,this.worldW,this.worldH);this.enemies=[];this.projectiles=[];this.gems=[];this.keys=this.input.keyboard!.addKeys("W,A,S,D") as any;this.cursors=this.input.keyboard!.createCursorKeys();this.input.keyboard!.on("keydown-ESC",()=>this.togglePause());this.cb(this.snap())}
-  drawWorld(){this.add.rectangle(this.worldW/2,this.worldH/2,this.worldW,this.worldH,0x22301f);const g=this.add.graphics();g.lineStyle(2,0x3e542f,.45);for(let x=0;x<=this.worldW;x+=120)g.lineBetween(x,0,x,this.worldH);for(let y=0;y<=this.worldH;y+=120)g.lineBetween(0,y,this.worldW,y);for(let i=0;i<80;i++){const x=60+Math.random()*(this.worldW-120),y=60+Math.random()*(this.worldH-120);this.add.circle(x,y,5,0x49633a,.5)}const center=this.add.circle(this.worldW/2,this.worldH/2,310,0x2c4326,.7);center.setDepth(-1)}
-  makePlayer(x:number,y:number){const c=this.add.container(x,y).setDepth(20);const shadow=this.add.ellipse(0,15,34,12,0x000000,.28);const body=this.add.ellipse(0,3,25,31,0x2563eb);const head=this.add.circle(0,-18,12,0xf3c7a5);const hair=this.add.arc(0,-22,13,190,350,false,0x3f2b1f);const cape=this.add.triangle(0,13,0,0,-13,25,13,25,0x172554);const sword=this.add.rectangle(19,2,6,35,0xe5e7eb).setAngle(35);const eye=this.add.circle(4,-19,2,0x111827);c.add([shadow,cape,body,head,hair,sword,eye]);return c}
-  makeEnemy(x:number,y:number,d:any){const c=this.add.container(x,y).setDepth(12);const shadow=this.add.ellipse(0,d.r*.8,d.r*1.7,d.r*.55,0x000000,.22);const body=this.add.circle(0,0,d.r,d.color);const eye1=this.add.circle(-5,-3,3,0xffffff),eye2=this.add.circle(5,-3,3,0xffffff);const p1=this.add.circle(-5,-3,1.5,0x111111),p2=this.add.circle(5,-3,1.5,0x111111);c.add([shadow,body,eye1,eye2,p1,p2]);c.setDataEnabled();c.setData("hp",d.hp*(1+this.elapsed/150));c.setData("speed",d.speed*(1+this.elapsed/500));c.setData("damage",d.damage*(1+this.elapsed/180));c.setData("xp",d.xp);c.setData("r",d.r);c.setData("cool",0);return c}
-  update(_t:number,ms:number){if(this.ended||this.paused||this.choices)return;const dt=Math.min(ms,50)/1000;this.elapsed+=dt;this.wave=1+Math.floor(this.elapsed/60);this.move(dt);this.updateEnemies(dt);this.updateProjectiles(dt);this.updateGems(dt);this.cool-=ms;this.spawn-=ms;if(this.cool<=0){this.attack();this.cool=650/this.stats.attackRate}if(this.spawn<=0){this.spawnEnemies();this.spawn=Math.max(140,620-this.elapsed*3)}if(this.elapsed>=600)this.end(true);this.cb(this.snap())}
-  move(dt:number){let x=0,y=0;if(this.keys.W.isDown||this.cursors.up.isDown)y--;if(this.keys.S.isDown||this.cursors.down.isDown)y++;if(this.keys.A.isDown||this.cursors.left.isDown)x--;if(this.keys.D.isDown||this.cursors.right.isDown)x++;if(x||y){const l=Math.hypot(x,y);this.player.x=Phaser.Math.Clamp(this.player.x+x/l*this.stats.moveSpeed*dt,25,this.worldW-25);this.player.y=Phaser.Math.Clamp(this.player.y+y/l*this.stats.moveSpeed*dt,25,this.worldH-25)}}
-  updateEnemies(dt:number){for(let i=this.enemies.length-1;i>=0;i--){const e=this.enemies[i];if(!e.active){this.enemies.splice(i,1);continue}const dx=this.player.x-e.x,dy=this.player.y-e.y,d=Math.hypot(dx,dy)||1,s=e.getData("speed") as number;e.x+=dx/d*s*dt;e.y+=dy/d*s*dt;const r=e.getData("r") as number;if(d<r+22){this.stats.hp-=e.getData("damage") as number*dt;if(this.stats.hp<=0){this.end(false);return}}}}
-  updateProjectiles(dt:number){for(let i=this.projectiles.length-1;i>=0;i--){const p=this.projectiles[i];if(!p.active){this.projectiles.splice(i,1);continue}p.x+=p.getData("vx")*dt;p.y+=p.getData("vy")*dt;p.setData("life",p.getData("life")-dt);if(p.getData("life")<=0){p.destroy();continue}for(const e of this.enemies){if(!e.active)continue;if(Phaser.Math.Distance.Between(p.x,p.y,e.x,e.y)<(e.getData("r") as number)+6){const dmg=p.getData("damage") as number;e.setData("hp",(e.getData("hp") as number)-dmg);this.hitFx(e.x,e.y);p.destroy();if(e.getData("hp")<=0)this.kill(e);break}}}}
-  updateGems(dt:number){for(let i=this.gems.length-1;i>=0;i--){const g=this.gems[i];if(!g.active){this.gems.splice(i,1);continue}const d=Phaser.Math.Distance.Between(this.player.x,this.player.y,g.x,g.y);if(d<this.stats.pickupRadius){g.x+=(this.player.x-g.x)*Math.min(1,dt*8);g.y+=(this.player.y-g.y)*Math.min(1,dt*8)}if(d<24){this.gain(g.getData("xp"));g.destroy()}}}
-  attack(){let target:any=null,bd=this.stats.attackRange;for(const e of this.enemies){if(!e.active)continue;const d=Phaser.Math.Distance.Between(this.player.x,this.player.y,e.x,e.y);if(d<bd){bd=d;target=e}}if(!target)return;const base=Math.atan2(target.y-this.player.y,target.x-this.player.x),count=this.stats.projectiles;for(let i=0;i<count;i++){const a=base+(i-(count-1)/2)*.16;const p=this.add.circle(this.player.x,this.player.y,6,0xfde047).setDepth(18);p.setData("vx",Math.cos(a)*this.stats.projectileSpeed);p.setData("vy",Math.sin(a)*this.stats.projectileSpeed);p.setData("damage",this.stats.damage*(Math.random()<this.stats.crit?2.2:1));p.setData("life",1.4);this.projectiles.push(p);this.meleeFx(target)}}
-  meleeFx(target:any){this.player.setScale(1.08);this.time.delayedCall(90,()=>this.player?.setScale(1))}
-  spawnEnemies(){const total=ENEMY_DEFS.reduce((a,e)=>a+e.weight,0);const count=Math.min(8,1+Math.floor(this.elapsed/14));for(let i=0;i<count;i++){let r=Math.random()*total,d=ENEMY_DEFS[0];for(const x of ENEMY_DEFS){r-=x.weight;if(r<=0){d=x;break}}const a=Math.random()*Math.PI*2,dist=650+Math.random()*300,x=Phaser.Math.Clamp(this.player.x+Math.cos(a)*dist,30,this.worldW-30),y=Phaser.Math.Clamp(this.player.y+Math.sin(a)*dist,30,this.worldH-30);this.enemies.push(this.makeEnemy(x,y,d))}}
-  kill(e:any){const xp=e.getData("xp") as number;this.kills++;const g=this.add.container(e.x,e.y).setDepth(10);g.add(this.add.circle(0,0,7,0x86efac));g.setData("xp",xp);this.gems.push(g);this.popText(e.x,e.y-28,`+${xp}`);e.destroy()}
-  gain(n:number){this.xp+=n;while(this.xp>=this.nextXp){this.xp-=this.nextXp;this.level++;this.nextXp=Math.floor(this.nextXp*1.22+10);this.choices=this.roll();}}
-  roll(){return [...UPGRADES].filter(u=>(this.upgradeLevels[u.id]??0)<u.max).sort(()=>Math.random()-.5).slice(0,3).map(u=>({id:u.id,name:u.name,description:u.description,icon:u.icon,level:(this.upgradeLevels[u.id]??0)+1}))}
-  chooseUpgrade(id:string){if(!this.choices)return;const u=UPGRADES.find(x=>x.id===id);if(!u)return;this.upgradeLevels[id]=(this.upgradeLevels[id]??0)+1;u.apply(this.stats);this.choices=null}
-  togglePause(){if(this.ended||this.choices)return;this.paused=!this.paused;this.cb(this.snap())}
-  hitFx(x:number,y:number){const g=this.add.circle(x,y,9,0xffffff,.8);this.tweens.add({targets:g,scale:2,alpha:0,duration:100,onComplete:()=>g.destroy()})}
-  popText(x:number,y:number,t:string){const txt=this.add.text(x,y,t,{fontSize:"12px",color:"#e0f2fe",fontStyle:"bold"}).setOrigin(.5).setDepth(30);this.tweens.add({targets:txt,y:y-20,alpha:0,duration:450,onComplete:()=>txt.destroy()})}
-  end(won:boolean){if(this.ended)return;this.ended=true;this.endCb({won,time:this.elapsed,kills:this.kills,level:this.level,power:Math.round(this.stats.damage*this.stats.attackRate*this.stats.projectiles)})}
-  snap():Snapshot{return{hp:Math.max(0,this.stats.hp),maxHp:this.stats.maxHp,xp:this.xp,nextXp:this.nextXp,level:this.level,time:this.elapsed,kills:this.kills,wave:this.wave,choices:this.choices,paused:this.paused,mapName:"Verdant Expanse",powerLevel:Math.round(this.stats.damage*this.stats.attackRate*this.stats.projectiles)}}
-  start(){this.scene.restart()}
+export interface Choice { id: string; icon: string; name: string; level: number; description: string; }
+export interface Snapshot { hp: number; maxHp: number; xp: number; nextXp: number; level: number; time: number; wave: number; mapName: string; kills: number; powerLevel: number; paused: boolean; choices?: Choice[]; }
+export interface Result { won: boolean; time: number; kills: number; level: number; power: number; }
+
+interface VisualEffect { x: number; y: number; life: number; maxLife: number; color: string; }
+interface Projectile { x: number; y: number; target: Enemy; speed: number; damage: number; }
+
+export class Game {
+  private canvas: HTMLCanvasElement;
+  private ctx: CanvasRenderingContext2D;
+  private host: HTMLDivElement;
+  private setS: (s: Snapshot | null) => void;
+  private setR: (r: Result | null) => void;
+
+  private isPaused = false;
+  private isRunning = false;
+  private animationId = 0;
+  private keys: Record<string, boolean> = {};
+
+  private player: Warrior | Mage = new Warrior();
+  private enemies: Enemy[] = [];
+  private effects: VisualEffect[] = [];
+  private projectiles: Projectile[] = [];
+  
+  private lastTime = 0;
+  private gameTime = 0;
+  private spawnTimer = 0;
+  private lastAttackTime = -999;
+  
+  private stats = { xp: 0, nextXp: 100, level: 1, kills: 0, wave: 1, powerLevel: 1 };
+
+  constructor(host: HTMLDivElement, setS: (s: Snapshot | null) => void, setR: (r: Result | null) => void) {
+    this.host = host;
+    this.setS = setS;
+    this.setR = setR;
+    this.canvas = document.createElement("canvas");
+    this.ctx = this.canvas.getContext("2d")!;
+    this.host.appendChild(this.canvas);
+    
+    this.resize = this.resize.bind(this);
+    this.onKeyDown = this.onKeyDown.bind(this);
+    this.onKeyUp = this.onKeyUp.bind(this);
+    this.loop = this.loop.bind(this);
+
+    window.addEventListener("resize", this.resize);
+    window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keyup", this.onKeyUp);
+    this.resize();
+  }
+
+  private resize() {
+    this.canvas.width = this.host.clientWidth;
+    this.canvas.height = this.host.clientHeight;
+    if (!this.isRunning) {
+      this.player.x = this.canvas.width / 2;
+      this.player.y = this.canvas.height / 2;
+    }
+  }
+
+  private onKeyDown(e: KeyboardEvent) { this.keys[e.key.toLowerCase()] = true; }
+  private onKeyUp(e: KeyboardEvent) { this.keys[e.key.toLowerCase()] = false; }
+
+  public start(heroType: "warrior" | "mage" = "warrior") {
+    this.isRunning = true;
+    this.isPaused = false;
+    this.gameTime = 0;
+    
+    this.player = heroType === "mage" ? new Mage() : new Warrior();
+    this.player.x = this.canvas.width / 2;
+    this.player.y = this.canvas.height / 2;
+    
+    this.enemies = [];
+    this.effects = [];
+    this.projectiles = [];
+    this.stats = { xp: 0, nextXp: 100, level: 1, kills: 0, wave: 1, powerLevel: 1 };
+    this.lastTime = performance.now();
+    this.updateHUD();
+    this.animationId = requestAnimationFrame(this.loop);
+  }
+
+  public pause() {
+    this.isPaused = !this.isPaused;
+    this.updateHUD();
+    if (!this.isPaused) {
+      this.lastTime = performance.now();
+      this.animationId = requestAnimationFrame(this.loop);
+    }
+  }
+
+  public choose(id: string) {
+    if (id === "dmg") this.player.damage += 15;
+    if (id === "spd") this.player.speed *= 1.15;
+    if (id === "rng") this.player.attackRange += 30;
+    
+    this.stats.powerLevel++;
+    this.isPaused = false;
+    this.lastTime = performance.now();
+    this.updateHUD(); 
+    this.animationId = requestAnimationFrame(this.loop);
+  }
+
+  public destroy() {
+    this.isRunning = false;
+    cancelAnimationFrame(this.animationId);
+    window.removeEventListener("resize", this.resize);
+    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("keyup", this.onKeyUp);
+    this.canvas.remove();
+  }
+
+  private updateHUD(choices?: Choice[]) {
+    this.setS({
+      hp: this.player.hp, maxHp: this.player.maxHp,
+      xp: this.stats.xp, nextXp: this.stats.nextXp,
+      level: this.stats.level, time: this.gameTime,
+      wave: this.stats.wave, mapName: "Verdant Expanse",
+      kills: this.stats.kills, powerLevel: this.stats.powerLevel,
+      paused: this.isPaused, choices
+    });
+  }
+
+  private loop(timestamp: number) {
+    if (!this.isRunning || this.isPaused) return;
+    const dt = Math.min((timestamp - this.lastTime) / 1000, 0.1); 
+    this.lastTime = timestamp;
+    this.gameTime += dt;
+
+    this.updateLogic(dt);
+    this.draw();
+    this.updateHUD();
+
+    this.animationId = requestAnimationFrame(this.loop);
+  }
+
+  private handleEnemyDeath(enemy: Enemy) {
+    this.enemies = this.enemies.filter(e => e !== enemy);
+    this.stats.kills++;
+    this.stats.xp += 15;
+    if (this.stats.xp >= this.stats.nextXp) {
+      this.stats.level++;
+      this.stats.xp = 0;
+      this.stats.nextXp = Math.floor(this.stats.nextXp * 1.5);
+      
+      const upgrades: Choice[] = [
+        { id: "dmg", icon: "⚔️", name: "Sharp Edge", level: this.stats.level, description: "Increases base attack damage." },
+        { id: "spd", icon: "🥾", name: "Swift Boots", level: this.stats.level, description: "Increases movement speed." },
+        { id: "rng", icon: "🎯", name: "Long Reach", level: this.stats.level, description: "Widens auto-attack radius." }
+      ];
+      this.isPaused = true;
+      this.updateHUD(upgrades);
+    }
+  }
+
+  private updateLogic(dt: number) {
+    this.player.update(this.keys, dt, { w: this.canvas.width, h: this.canvas.height });
+    this.stats.wave = 1 + Math.floor(this.gameTime / 60);
+    
+    this.spawnTimer -= dt;
+    if (this.spawnTimer <= 0) {
+      const margin = 50;
+      const side = Math.floor(Math.random() * 4);
+      let ex = 0, ey = 0;
+      switch (side) {
+        case 0: ex = Math.random() * this.canvas.width; ey = -margin; break; 
+        case 1: ex = this.canvas.width + margin; ey = Math.random() * this.canvas.height; break; 
+        case 2: ex = Math.random() * this.canvas.width; ey = this.canvas.height + margin; break; 
+        case 3: ex = -margin; ey = Math.random() * this.canvas.height; break; 
+      }
+      this.enemies.push(new Enemy(ex, ey, 1 + (this.stats.wave * 0.1)));
+      this.spawnTimer = Math.max(0.2, 1.5 - (this.gameTime * 0.005) - (this.stats.wave * 0.1));
+    }
+
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const enemy = this.enemies[i];
+      enemy.update(this.player.x, this.player.y, dt);
+      if (Math.hypot(this.player.x - enemy.x, this.player.y - enemy.y) < 20 + enemy.radius) {
+        this.player.hp -= 15 * dt; 
+        if (this.player.hp <= 0) {
+          this.isRunning = false;
+          this.setR({ won: false, time: this.gameTime, kills: this.stats.kills, level: this.stats.level, power: this.stats.powerLevel });
+          return;
+        }
+      }
+    }
+
+    // Auto-Attack 
+    if (this.gameTime - this.lastAttackTime >= this.player.attackCooldown) {
+      let closest: Enemy | null = null;
+      let minDist = this.player.attackRange;
+      for (const enemy of this.enemies) {
+        const dist = Math.hypot(this.player.x - enemy.x, this.player.y - enemy.y);
+        if (dist <= minDist) { minDist = dist; closest = enemy; }
+      }
+
+      if (closest) {
+        this.lastAttackTime = this.gameTime;
+        if (this.player.type === "warrior") {
+          closest.hp -= this.player.damage;
+          this.effects.push({ x: closest.x, y: closest.y, life: 0.2, maxLife: 0.2, color: "#ef4444" });
+          if (closest.hp <= 0) this.handleEnemyDeath(closest);
+        } else if (this.player.type === "mage") {
+          this.projectiles.push({
+            x: this.player.x, y: this.player.y - 15,
+            target: closest, speed: 450, damage: this.player.damage
+          });
+        }
+      }
+    }
+
+    // Projectiles Movement
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const p = this.projectiles[i];
+      if (p.target.hp <= 0) { this.projectiles.splice(i, 1); continue; } // Target already dead
+      
+      const dx = p.target.x - p.x;
+      const dy = p.target.y - p.y;
+      const dist = Math.hypot(dx, dy);
+      
+      if (dist < 15) {
+        p.target.hp -= p.damage;
+        this.effects.push({ x: p.target.x, y: p.target.y, life: 0.2, maxLife: 0.2, color: "#38bdf8" });
+        if (p.target.hp <= 0) this.handleEnemyDeath(p.target);
+        this.projectiles.splice(i, 1);
+      } else {
+        p.x += (dx / dist) * p.speed * dt;
+        p.y += (dy / dist) * p.speed * dt;
+      }
+    }
+
+    this.effects.forEach(e => e.life -= dt);
+    this.effects = this.effects.filter(e => e.life > 0);
+  }
+
+  private draw() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+    this.ctx.lineWidth = 1;
+    for (let x = 0; x < this.canvas.width; x += 100) { this.ctx.beginPath(); this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvas.height); this.ctx.stroke(); }
+    for (let y = 0; y < this.canvas.height; y += 100) { this.ctx.beginPath(); this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvas.width, y); this.ctx.stroke(); }
+
+    this.enemies.forEach(enemy => enemy.draw(this.ctx, this.gameTime));
+    
+    // Draw Projectiles
+    this.projectiles.forEach(p => {
+      this.ctx.save();
+      this.ctx.translate(p.x, p.y);
+      this.ctx.fillStyle = "#38bdf8";
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowColor = "#38bdf8";
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, 5, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
+    });
+
+    const isMoving = Object.values(this.keys).some(k => k);
+    this.player.draw(this.ctx, this.gameTime, isMoving, this.gameTime - this.lastAttackTime);
+
+    this.effects.forEach(effect => {
+      this.ctx.save();
+      this.ctx.translate(effect.x, effect.y);
+      this.ctx.strokeStyle = effect.color;
+      this.ctx.globalAlpha = effect.life / effect.maxLife;
+      this.ctx.lineWidth = 4;
+      this.ctx.beginPath();
+      this.ctx.moveTo(-15, -15); this.ctx.lineTo(15, 15);
+      this.ctx.moveTo(15, -15); this.ctx.lineTo(-15, 15);
+      this.ctx.stroke();
+      this.ctx.restore();
+    });
+  }
 }
-export class Game{g:Phaser.Game;scene:World;constructor(host:HTMLElement,cb:(s:Snapshot)=>void,end:(r:Result)=>void){this.g=new Phaser.Game({type:Phaser.AUTO,width:innerWidth,height:innerHeight,parent:host,backgroundColor:"#22301f",physics:{default:"arcade"},scene:[]});this.scene=new World(cb,end);this.g.scene.add("world",this.scene,true);addEventListener("resize",()=>this.g.scale.resize(innerWidth,innerHeight))}start(){this.scene.start()}choose(id:string){this.scene.chooseUpgrade(id)}pause(){this.scene.togglePause()}destroy(){this.g.destroy(true)}}
