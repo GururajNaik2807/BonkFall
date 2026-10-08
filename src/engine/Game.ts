@@ -1,8 +1,9 @@
 import { Warrior } from "../entities/Warrior";
 import { Mage } from "../entities/Mage";
 import { Enemy } from "../entities/Enemy";
-import { MagicMissile } from "../entities/Projectiles";
-import { DeathSlash, HitImpact, ScreenShake, type Effect } from "../effects/Effects";
+import { DeathSlash, HitImpact, ScreenShake, FloatingText, type Effect } from "../effects/Effects";
+import { EnemyProjectile, MagicMissile } from "../entities/Projectiles";
+import type { EnemyType } from "../entities/Enemy";
 import type { Snapshot, Result } from "../types";
 
 export class Game {
@@ -13,6 +14,7 @@ export class Game {
   enemies: Enemy[] = [];
   effects: Effect[] = [];
   projectiles: MagicMissile[] = []; 
+  enemyProjectiles: EnemyProjectile[] = [];
   
   keys: Record<string, boolean> = {};
   lastTime: number = 0;
@@ -29,6 +31,8 @@ export class Game {
   screenShake: ScreenShake | null = null;
   
   zoom = 1.5; // Camera zoom
+  wave = 1;
+  waveTimer = 0;
 
   constructor(host: HTMLDivElement, setS: any, setR: any) {
     this.canvas = document.createElement("canvas");
@@ -64,11 +68,14 @@ export class Game {
     }
     
     this.projectiles = [];
+    this.enemyProjectiles = [];
     this.effects = [];
     this.screenShake = null;
     
     this.kills = 0;
     this.gameTime = 0;
+    this.wave = 1;
+    this.waveTimer = 0;
     this.isPaused = false;
     this.isGameOver = false;
     this.lastTime = performance.now();
@@ -78,6 +85,7 @@ export class Game {
   handleHit = (enemy: Enemy, damage: number, attackAngle: number) => {
     enemy.takeDamage(damage, attackAngle);
     this.effects.push(new HitImpact(enemy.x, enemy.y));
+    this.effects.push(new FloatingText(enemy.x, enemy.y - 20, Math.floor(damage).toString(), damage >= 25 ? '#ef4444' : '#fcd34d'));
     
     // Tiny screen shake for heavy attacks
     if (damage >= 25 && !this.screenShake) {
@@ -92,6 +100,18 @@ export class Game {
 
   handleShoot = (projectile: MagicMissile) => {
     this.projectiles.push(projectile);
+  }
+
+  handleEnemyShoot = (x: number, y: number, tx: number, ty: number) => {
+    this.enemyProjectiles.push(new EnemyProjectile(x, y, tx, ty));
+  }
+
+  damagePlayer = (amount: number) => {
+    if (this.player.hitFlashTimer > 0) return; // i-frames
+    this.player.hp -= amount;
+    this.player.hitFlashTimer = 500;
+    this.screenShake = new ScreenShake(5);
+    this.effects.push(new FloatingText(this.player.x, this.player.y - 20, Math.floor(amount).toString(), '#ef4444'));
   }
 
   pause() {
@@ -125,34 +145,37 @@ export class Game {
     if (!this.player) return;
     this.gameTime += dt / 1000;
 
+    this.waveTimer += dt / 1000;
+    if (this.waveTimer >= 30) {
+      this.waveTimer = 0;
+      this.wave++;
+      this.spawnWave();
+    }
+
     this.player.update(dt, this.enemies, this.keys, this.handleHit, this.handleShoot);
 
     this.enemies.forEach(e => {
-      e.update(dt, this.player.x, this.player.y, this.enemies);
+      e.update(dt, this.player.x, this.player.y, this.enemies, this.handleEnemyShoot);
       
       // Enemy collision with player
       const dist = Math.hypot(e.x - this.player.x, e.y - this.player.y);
-      if (dist < 20 && this.player.hitFlashTimer <= 0) {
-        this.player.hp -= 10;
-        this.player.hitFlashTimer = 500; // I-frames
-        this.screenShake = new ScreenShake(5); // Shake on hit
+      if (dist < e.radius + 10 && this.player.hitFlashTimer <= 0) {
+        this.damagePlayer(10);
       }
     });
     
     this.enemies = this.enemies.filter(e => !e.dead);
 
-    // Spawn more enemies slowly
-    if (Math.random() < 0.05) {
-      const angle = Math.random() * Math.PI * 2;
-      const distance = 800; 
-      this.enemies.push(new Enemy(
-        this.player.x + Math.cos(angle) * distance, 
-        this.player.y + Math.sin(angle) * distance
-      ));
+    // Trickle spawn based on wave
+    if (Math.random() < 0.02 + this.wave * 0.005) {
+      this.spawnRandomEnemy();
     }
 
     this.projectiles.forEach(p => p.update(dt, this.handleHit));
     this.projectiles = this.projectiles.filter(p => !p.dead);
+
+    this.enemyProjectiles.forEach(p => p.update(dt, this.player.x, this.player.y, this.damagePlayer));
+    this.enemyProjectiles = this.enemyProjectiles.filter(p => !p.dead);
 
     this.effects = this.effects.filter(effect => !effect.update(dt));
     
@@ -171,6 +194,54 @@ export class Game {
         level: 1, // To be implemented later with XP
         power: 1
       });
+    }
+  }
+
+  spawnRandomEnemy(fixedAngle?: number, fixedDistance?: number) {
+    const angle = fixedAngle !== undefined ? fixedAngle : Math.random() * Math.PI * 2;
+    const distance = fixedDistance !== undefined ? fixedDistance : 800;
+    
+    const roll = Math.random();
+    let type: EnemyType = 'grunt';
+    if (this.wave > 1 && roll < 0.3) type = 'swarmer';
+    else if (this.wave > 2 && roll < 0.45) type = 'ranged';
+    else if (this.wave > 3 && roll < 0.6) type = 'brute';
+
+    const isElite = Math.random() < 0.02 * this.wave; // 2% chance per wave
+
+    this.enemies.push(new Enemy(
+      this.player.x + Math.cos(angle) * distance, 
+      this.player.y + Math.sin(angle) * distance,
+      type,
+      isElite
+    ));
+  }
+
+  spawnWave() {
+    const type = this.wave % 3;
+    if (type === 0) {
+      // Pincer wave (top and bottom walls)
+      for (let i = -5; i <= 5; i++) {
+        this.enemies.push(new Enemy(this.player.x + i * 40, this.player.y - 700, 'swarmer'));
+        this.enemies.push(new Enemy(this.player.x + i * 40, this.player.y + 700, 'swarmer'));
+      }
+    } else if (type === 1) {
+      // Encirclement ring
+      const count = 12 + this.wave * 2;
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        this.spawnRandomEnemy(angle, 700);
+      }
+    } else {
+      // Brutal wave
+      for (let i = 0; i < 5 + this.wave; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        this.enemies.push(new Enemy(
+          this.player.x + Math.cos(angle) * 700,
+          this.player.y + Math.sin(angle) * 700,
+          'brute'
+        ));
+      }
     }
   }
 
@@ -213,6 +284,7 @@ export class Game {
     // Game Objects
     this.enemies.forEach(e => e.draw(this.ctx));
     this.projectiles.forEach(p => p.draw(this.ctx));
+    this.enemyProjectiles.forEach(p => p.draw(this.ctx));
     this.effects.forEach(effect => effect.draw(this.ctx));
     this.player.draw(this.ctx);
 
@@ -223,8 +295,8 @@ export class Game {
     if (!this.player || this.isGameOver) return;
     this.setS({
       hp: this.player.hp, maxHp: this.player.maxHp, xp: this.kills * 10, nextXp: 100, level: 1,
-      time: this.gameTime, wave: 1, mapName: "Verdant Expanse", kills: this.kills,
-      powerLevel: 1, paused: this.isPaused
+      time: this.gameTime, wave: this.wave, mapName: "Verdant Expanse", kills: this.kills,
+      powerLevel: 1, paused: this.isPaused, playerAngle: this.player.targetAngle || 0
     });
   }
 

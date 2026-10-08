@@ -99,4 +99,53 @@ export class ScreenShake {
     this.offsetY = (Math.random() - 0.5) * 2 * this.magnitude * decay;
     return false;
   }
+}
+
+export class FloatingText implements Effect {
+  x: number;
+  y: number;
+  text: string;
+  progress = 0;
+  duration = 600; // ms
+  color: string;
+
+  constructor(x: number, y: number, text: string, color: string = '#fcd34d') {
+    this.x = x + (Math.random() - 0.5) * 20;
+    this.y = y + (Math.random() - 0.5) * 10;
+    this.text = text;
+    this.color = color;
+  }
+
+  update(dt: number): boolean {
+    this.progress += dt / this.duration;
+    this.y -= dt * 0.05; // Float upwards
+    return this.progress >= 1;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    if (this.progress >= 1) return;
+
+    const alpha = 1 - Math.pow(this.progress, 2);
+    // Squash and stretch: scale up quickly then shrink
+    const scale = this.progress < 0.2 ? 1 + (this.progress / 0.2) * 0.5 : 1.5 - ((this.progress - 0.2) / 0.8) * 0.5;
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.scale(scale, scale);
+
+    ctx.font = '900 12px Inter';
+    ctx.textAlign = 'center';
+    
+    // Outline
+    ctx.strokeStyle = `rgba(15, 23, 42, ${alpha})`;
+    ctx.lineWidth = 3;
+    ctx.strokeText(this.text, 0, 0);
+
+    // Text
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = this.color;
+    ctx.fillText(this.text, 0, 0);
+
+    ctx.restore();
+  }
 }

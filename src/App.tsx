@@ -150,11 +150,28 @@ function HUD({ s, game }: { s: Snapshot; game: Game | null }) {
       </div>
       <div className="map">
         <div className="maptitle">WORLD MAP</div>
-        <div className="mapworld"><i /><b /></div>
+        <div className="mapworld">
+          <i style={{ transform: `translate(-50%, -50%) rotate(${s.playerAngle || 0}rad)` }} />
+          <b />
+          {/* Simulated Elite Ping */}
+          {s.wave > 1 && <div className="ping" />}
+        </div>
         <small>Verdant Expanse</small>
       </div>
-      {s.paused && <div className="paused"><h2>PAUSED</h2><button onClick={() => game?.pause()}>RESUME</button></div>}
+      {s.paused && (
+        <div className="paused">
+          <h2>PAUSED</h2>
+          <div className="paused-stats">
+            <div><span>Time</span><b>{fmt(s.time)}</b></div>
+            <div><span>Kills</span><b>{s.kills}</b></div>
+            <div><span>Power Level</span><b>{s.powerLevel}</b></div>
+            <div><span>Current Map</span><b>{s.mapName}</b></div>
+          </div>
+          <button onClick={() => game?.pause()}>RESUME</button>
+        </div>
+      )}
     </>
   );
 }
+
 

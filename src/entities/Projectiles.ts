@@ -43,3 +43,44 @@ export class MagicMissile {
     ctx.shadowBlur = 0; // Reset shadow
   }
 }
+
+export class EnemyProjectile {
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+  speed: number = 200;
+  damage: number = 15;
+  dead: boolean = false;
+
+  constructor(x: number, y: number, targetX: number, targetY: number) {
+    this.x = x;
+    this.y = y;
+    const dx = targetX - x;
+    const dy = targetY - y;
+    const mag = Math.hypot(dx, dy);
+    this.dx = mag > 0 ? dx / mag : 0;
+    this.dy = mag > 0 ? dy / mag : 0;
+  }
+
+  update(dt: number, playerX: number, playerY: number, onPlayerHit: Function) {
+    this.x += this.dx * this.speed * (dt / 1000);
+    this.y += this.dy * this.speed * (dt / 1000);
+
+    const dist = Math.hypot(this.x - playerX, this.y - playerY);
+    if (dist < 15) {
+      onPlayerHit(this.damage);
+      this.dead = true;
+    }
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.fillStyle = '#ef4444'; // Red
+    ctx.shadowColor = '#ef4444';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+}

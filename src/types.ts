@@ -11,6 +11,7 @@ export interface Snapshot {
   powerLevel: number;
   paused: boolean;
   choices?: any[];
+  playerAngle?: number;
 }
 
 export interface Result {
