@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Game, type Snapshot, type Result } from "./Game";
-import "./Styles.css";
+import { Game } from "./engine/Game";
+import type { Snapshot, Result } from "./types";
+import "./styles.css";
 
 const fmt = (n: number) => `${Math.floor(n / 60).toString().padStart(2, "0")}:${Math.floor(n % 60).toString().padStart(2, "0")}`;
 
@@ -11,6 +12,7 @@ export default function App() {
   const [r, setR] = useState<Result | null>(null);
   const [started, setStarted] = useState(false);
   const [charSelect, setCharSelect] = useState(false);
+  const [selectedHero, setSelectedHero] = useState<"warrior" | "mage" | null>(null);
 
   useEffect(() => {
     if (!host.current) return;
@@ -24,9 +26,26 @@ export default function App() {
 
   const confirmCharacter = (type: "warrior" | "mage") => {
     setCharSelect(false);
+    setSelectedHero(type);
     game.current?.start(type);
     setR(null);
     setStarted(true);
+  };
+
+  const runAgain = () => {
+    if (selectedHero) {
+      game.current?.start(selectedHero);
+      setR(null);
+    } else {
+      openCharacterSelect();
+    }
+  };
+
+  const changeHero = () => {
+    setR(null);
+    setStarted(false);
+    setSelectedHero(null);
+    openCharacterSelect();
   };
 
   return (
@@ -93,7 +112,10 @@ export default function App() {
               <span>LEVEL<b>{r.level}</b></span>
               <span>POWER<b>{r.power}</b></span>
             </div>
-            <button onClick={openCharacterSelect}>RUN AGAIN</button>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <button onClick={runAgain}>RUN AGAIN</button>
+              <button onClick={changeHero}>CHANGE HERO</button>
+            </div>
           </div>
         </div>
       )}
@@ -135,3 +157,4 @@ function HUD({ s, game }: { s: Snapshot; game: Game | null }) {
     </>
   );
 }
+
