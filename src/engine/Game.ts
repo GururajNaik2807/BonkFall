@@ -1,7 +1,7 @@
 import { Warrior } from "../entities/Warrior";
 import { Mage } from "../entities/Mage";
 import { Enemy } from "../entities/Enemy";
-import { DeathSlash, HitImpact, ScreenShake, FloatingText, type Effect } from "../effects/Effects";
+import { DeathSlash, HitImpact, ScreenShake, FloatingText, BloodSplatter, type Effect } from "../effects/Effects";
 import { EnemyProjectile, MagicMissile } from "../entities/Projectiles";
 import type { EnemyType } from "../entities/Enemy";
 import type { Snapshot, Result } from "../types";
@@ -94,7 +94,7 @@ export class Game {
 
     if (enemy.dead) {
       this.kills++;
-      this.effects.push(new DeathSlash(enemy.x, enemy.y, attackAngle));
+      this.effects.push(new BloodSplatter(enemy.x, enemy.y));
     }
   }
 

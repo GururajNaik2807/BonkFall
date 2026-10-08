@@ -12,6 +12,7 @@ export class Enemy {
   dead: boolean = false;
   radius: number = 14;
   mass: number = 1;
+  angle: number = 0;
 
   hitFlashTimer: number = 0;
   knockbackX: number = 0;
@@ -110,6 +111,10 @@ export class Enemy {
     const dirY = (mag > 0 ? dy / mag : 0) + sepY * 1.5;
     const dirMag = Math.hypot(dirX, dirY);
 
+    if (dirMag > 0.001) {
+      this.angle = Math.atan2(dirY, dirX);
+    }
+
     if (mag > this.radius + 5) {
       this.x += (dirX / dirMag) * this.speed * (dt / 1000);
       this.y += (dirY / dirMag) * this.speed * (dt / 1000);
@@ -118,7 +123,7 @@ export class Enemy {
 
   takeDamage(amount: number, angle?: number) {
     this.hp -= amount;
-    this.hitFlashTimer = 100;
+    this.hitFlashTimer = 60;
     
     if (angle !== undefined) {
       // Squash & stretch implied by hitflash visually, knockback affected by mass
@@ -140,70 +145,114 @@ export class Enemy {
 
     if (isHit) {
       // Squash and stretch when hit
-      ctx.scale(1.2, 0.8);
+      ctx.scale(1.3, 0.7);
     }
+
+    // Rotate to face movement direction
+    ctx.rotate(this.angle);
+
+    ctx.shadowBlur = isHit ? 0 : 6;
+    ctx.shadowColor = isHit ? 'transparent' : '#ff2200';
+    ctx.strokeStyle = '#5c0d11';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = isHit ? '#ffffff' : '#0d0d11';
 
     if (this.isElite) {
-      // Elite Aura
       const pulse = 1 + Math.sin(time / 200) * 0.1;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius * 1.8 * pulse, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
-      ctx.fill();
+      ctx.scale(pulse, pulse);
     }
 
+    ctx.beginPath();
+    
     if (this.type === 'swarmer') {
-      ctx.fillStyle = isHit ? '#fff' : '#bef264';
-      ctx.beginPath();
-      ctx.moveTo(0, -this.radius);
-      ctx.lineTo(this.radius, this.radius);
-      ctx.lineTo(-this.radius, this.radius);
+      // Spiky teardrop/arachnid
+      const jitter = Math.sin(time / 50) * 2;
+      ctx.moveTo(this.radius + jitter, 0);
+      ctx.lineTo(-this.radius, -this.radius + jitter);
+      ctx.lineTo(-this.radius / 2, 0);
+      ctx.lineTo(-this.radius, this.radius - jitter);
+      ctx.closePath();
       ctx.fill();
-    } 
-    else if (this.type === 'brute') {
-      ctx.fillStyle = isHit ? '#fff' : '#334155';
-      ctx.fillRect(-this.radius, -this.radius, this.radius * 2, this.radius * 2);
-      // Brute eyes
-      ctx.fillStyle = isHit ? '#000' : '#ef4444';
-      ctx.fillRect(-this.radius/2 - 2, -4, 4, 4);
-      ctx.fillRect(this.radius/2 - 2, -4, 4, 4);
-    }
-    else if (this.type === 'ranged') {
-      ctx.fillStyle = isHit ? '#fff' : '#a855f7';
+      if (!isHit) ctx.stroke();
+
+      // Twitching legs
       ctx.beginPath();
-      ctx.moveTo(0, -this.radius);
-      ctx.lineTo(this.radius, 0);
-      ctx.lineTo(0, this.radius);
-      ctx.lineTo(-this.radius, 0);
+      ctx.moveTo(0, 0); ctx.lineTo(-this.radius, -this.radius * 1.5 + jitter);
+      ctx.moveTo(0, 0); ctx.lineTo(-this.radius, this.radius * 1.5 - jitter);
+      ctx.moveTo(-this.radius/2, 0); ctx.lineTo(-this.radius*1.5, -this.radius + jitter);
+      ctx.moveTo(-this.radius/2, 0); ctx.lineTo(-this.radius*1.5, this.radius - jitter);
+      ctx.strokeStyle = isHit ? '#ffffff' : '#1a080c';
+      ctx.stroke();
+
+      // Slit eye
+      ctx.fillStyle = isHit ? '#000' : '#f59e0b';
+      ctx.shadowBlur = isHit ? 0 : 8;
+      ctx.shadowColor = '#f59e0b';
+      ctx.fillRect(this.radius / 2, -2, 3, 4);
+      
+    } else if (this.type === 'brute') {
+      // Bulky, asymmetric jagged mass
+      const nodes = 7;
+      for (let i = 0; i < nodes; i++) {
+        const a = (i / nodes) * Math.PI * 2;
+        const r = this.radius + Math.sin(time / 150 + i * 2) * 4;
+        if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+        else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      if (!isHit) ctx.stroke();
+
+      // Multiple pinpoint eyes
+      ctx.fillStyle = isHit ? '#000' : '#ef4444';
+      ctx.shadowBlur = isHit ? 0 : 10;
+      ctx.shadowColor = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(this.radius / 2, -5, 2, 0, Math.PI*2);
+      ctx.arc(this.radius / 2, 5, 2, 0, Math.PI*2);
+      ctx.arc(this.radius / 3, -10, 1.5, 0, Math.PI*2);
       ctx.fill();
 
-      // Telegraph indicator
-      if (this.attackTimer < 1000 && this.attackTimer > 0) {
+    } else { // 'ranged' or 'grunt' -> Stalker / Lurker
+      // Floating parasite/eyeball
+      const r = this.radius + Math.sin(time / 100) * 2;
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      if (!isHit) ctx.stroke();
+      
+      // Undulating tail tendrils behind
+      ctx.beginPath();
+      ctx.moveTo(-r, 0);
+      ctx.quadraticCurveTo(-r * 2, Math.sin(time / 80) * 10, -r * 3, Math.sin(time / 100) * 5);
+      ctx.moveTo(-r, 5);
+      ctx.quadraticCurveTo(-r * 1.5, Math.sin(time / 70 + 1) * 8, -r * 2.5, Math.sin(time / 90 + 1) * 6);
+      ctx.strokeStyle = isHit ? '#ffffff' : '#5c0d11';
+      ctx.stroke();
+
+      // Giant Eye
+      ctx.fillStyle = isHit ? '#000' : '#1a080c';
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(2, 0, r * 0.6, 0, Math.PI*2);
+      ctx.fill();
+      
+      // Pupil (pointing forward)
+      ctx.fillStyle = isHit ? '#fff' : '#f59e0b';
+      ctx.shadowBlur = isHit ? 0 : 8;
+      ctx.shadowColor = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(4, 0, r * 0.3, 0, Math.PI*2);
+      ctx.fill();
+
+      // Telegraph if ranged
+      if (this.type === 'ranged' && this.attackTimer < 1000 && this.attackTimer > 0) {
         ctx.beginPath();
         ctx.arc(0, 0, this.radius * 2.5, 0, Math.PI * 2);
         ctx.strokeStyle = `rgba(239, 68, 68, ${1 - this.attackTimer / 1000})`;
         ctx.lineWidth = 2;
+        ctx.shadowBlur = 0;
         ctx.stroke();
       }
-    }
-    else {
-      // Grunt (Goblin)
-      ctx.fillStyle = isHit ? '#fff' : '#14532d';
-      ctx.beginPath();
-      ctx.moveTo(-12, -6); ctx.lineTo(-24, -14); ctx.lineTo(-6, -12); ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(12, -6); ctx.lineTo(24, -14); ctx.lineTo(6, -12); ctx.fill();
-
-      ctx.fillStyle = isHit ? '#ef4444' : '#22c55e';
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = isHit ? '#000' : '#ef4444';
-      ctx.beginPath();
-      ctx.arc(-5, -4, 2.5, 0, Math.PI * 2);
-      ctx.arc(5, -4, 2.5, 0, Math.PI * 2); 
-      ctx.fill();
     }
 
     ctx.restore();

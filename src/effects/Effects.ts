@@ -148,4 +148,58 @@ export class FloatingText implements Effect {
 
     ctx.restore();
   }
+}
+
+export class BloodSplatter implements Effect {
+  x: number;
+  y: number;
+  progress = 0;
+  duration = 400;
+  particles: {x: number, y: number, vx: number, vy: number, size: number}[] = [];
+
+  constructor(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+    const count = 6 + Math.random() * 4;
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 50 + Math.random() * 150;
+      this.particles.push({
+        x: 0, y: 0,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: 2 + Math.random() * 3
+      });
+    }
+  }
+
+  update(dt: number): boolean {
+    this.progress += dt / this.duration;
+    
+    for (const p of this.particles) {
+      p.x += p.vx * (dt / 1000);
+      p.y += p.vy * (dt / 1000);
+      p.vx *= 0.9;
+      p.vy *= 0.9;
+    }
+    return this.progress >= 1;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    if (this.progress >= 1) return;
+    const alpha = 1 - Math.pow(this.progress, 2);
+    
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    
+    // Using deep decayed crimson / dark matter
+    ctx.fillStyle = `rgba(26, 8, 12, ${alpha})`; 
+    
+    for (const p of this.particles) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
 }
