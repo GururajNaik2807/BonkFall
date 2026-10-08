@@ -1,83 +1,123 @@
-export class Mage {
-  public type = "mage";
-  public x = 0;
-  public y = 0;
-  public speed = 180;
-  public hp = 70;
-  public maxHp = 70;
-  public attackRange = 280;
-  public damage = 35;
-  public attackCooldown = 1.2;
+import { Enemy } from "./Enemy";
 
-  private facingRight = true;
+// Tracking Projectile Class
+export class MagicMissile {
+  x: number;
+  y: number;
+  target: Enemy;
+  speed: number = 400;
+  damage: number = 20;
+  dead: boolean = false;
 
-  public update(keys: Record<string, boolean>, dt: number, canvasBounds: { w: number; h: number }) {
-    let dx = 0, dy = 0;
-    if (keys["w"] || keys["arrowup"]) dy -= 1;
-    if (keys["s"] || keys["arrowdown"]) dy += 1;
-    if (keys["a"] || keys["arrowleft"]) dx -= 1;
-    if (keys["d"] || keys["arrowright"]) dx += 1;
-
-    if (dx !== 0 && dy !== 0) {
-      const length = Math.sqrt(dx * dx + dy * dy);
-      dx /= length; dy /= length;
-    }
-
-    if (dx > 0) this.facingRight = true;
-    if (dx < 0) this.facingRight = false;
-
-    this.x += dx * this.speed * dt;
-    this.y += dy * this.speed * dt;
-    this.x = Math.max(20, Math.min(canvasBounds.w - 20, this.x));
-    this.y = Math.max(20, Math.min(canvasBounds.h - 20, this.y));
+  constructor(x: number, y: number, target: Enemy) {
+    this.x = x;
+    this.y = y;
+    this.target = target;
   }
 
-  public draw(ctx: CanvasRenderingContext2D, gameTime: number, isMoving: boolean, timeSinceAttack: number) {
+  update(dt: number, onHit: Function) {
+    if (this.target.dead) {
+      this.dead = true; // Fizzle out if target dies before impact
+      return;
+    }
+
+    const dx = this.target.x - this.x;
+    const dy = this.target.y - this.y;
+    const mag = Math.hypot(dx, dy);
+
+    if (mag < 15) {
+      onHit(this.target, this.damage, Math.atan2(dy, dx));
+      this.dead = true;
+    } else {
+      this.x += (dx / mag) * this.speed * (dt / 1000);
+      this.y += (dy / mag) * this.speed * (dt / 1000);
+    }
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.fillStyle = '#38bdf8'; // Glowing blue missile
+    ctx.shadowColor = '#38bdf8';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0; // Reset shadow
+  }
+}
+
+// Mage Character Class
+export class Mage {
+  x: number = window.innerWidth / 2;
+  y: number = window.innerHeight / 2;
+  speed: number = 220; 
+  attackRange: number = 300; // Much further than Warrior
+  
+  cooldownTimer: number = 0;
+  attackSpeed: number = 600; // ms between shots
+
+  update(dt: number, enemies: Enemy[], keys: Record<string, boolean>, onHit: Function, onShoot: Function) {
+    // Movement
+    let dx = 0; let dy = 0;
+    if (keys['w'] || keys['ArrowUp']) dy -= 1;
+    if (keys['s'] || keys['ArrowDown']) dy += 1;
+    if (keys['a'] || keys['ArrowLeft']) dx -= 1;
+    if (keys['d'] || keys['ArrowRight']) dx += 1;
+
+    const mag = Math.hypot(dx, dy);
+    if (mag > 0) {
+      this.x += (dx / mag) * this.speed * (dt / 1000);
+      this.y += (dy / mag) * this.speed * (dt / 1000);
+    }
+    
+    // Attack Logic
+    if (this.cooldownTimer > 0) {
+      this.cooldownTimer -= dt;
+    } else {
+      const target = this.getClosestEnemy(enemies);
+      if (target && this.distanceTo(target) <= this.attackRange) {
+        onShoot(new MagicMissile(this.x, this.y - 10, target));
+        this.cooldownTimer = this.attackSpeed;
+      }
+    }
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
     ctx.save();
     ctx.translate(this.x, this.y);
 
-    ctx.strokeStyle = "rgba(56, 189, 248, 0.15)";
-    ctx.beginPath(); ctx.arc(0, 0, this.attackRange, 0, Math.PI * 2); ctx.stroke();
-
-    if (!this.facingRight) ctx.scale(-1, 1);
-
-    const bobOffset = isMoving ? Math.sin(gameTime * 15) * 3 : Math.sin(gameTime * 3) * 1;
-    ctx.translate(0, bobOffset);
-    ctx.scale(1.5, 1.5);
-
-    // Robe
-    ctx.fillStyle = "#581c87";
-    ctx.beginPath();
-    ctx.moveTo(-8, -5); ctx.lineTo(8, -5); ctx.lineTo(12, 18); ctx.lineTo(-12, 18); ctx.fill();
-
-    // Belt
-    ctx.fillStyle = "#fbbf24"; ctx.fillRect(-9, 4, 18, 2);
-
-    // Head
-    ctx.fillStyle = "#ffedd5"; ctx.fillRect(-5, -14, 10, 10);
-
-    // Pointy Hat
-    ctx.fillStyle = "#3b0764";
-    ctx.beginPath(); ctx.moveTo(-12, -12); ctx.lineTo(12, -12); ctx.lineTo(0, -32); ctx.fill();
-    ctx.fillRect(-14, -14, 28, 3); // Brim
-
-    // Staff
-    ctx.save();
-    const isAttacking = timeSinceAttack < 0.2;
-    if (isAttacking) {
-      ctx.translate(8, 0); ctx.rotate(Math.PI / 6);
-    } else {
-      ctx.translate(6, 2); ctx.rotate(Math.PI / 12);
-    }
+    // Robe (Dark Purple)
+    ctx.fillStyle = '#7c3aed';
+    ctx.fillRect(-8, -2, 16, 16);
     
-    // Pole
-    ctx.fillStyle = "#78350f"; ctx.fillRect(0, -15, 3, 30);
-    // Glowing Gem
-    ctx.fillStyle = "#38bdf8";
-    ctx.shadowBlur = 10; ctx.shadowColor = "#38bdf8";
-    ctx.beginPath(); ctx.arc(1.5, -17, 4, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+    // Face (Skin tone)
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(-5, -10, 10, 8);
+    
+    // Eyes
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-3, -8, 2, 2);
+    ctx.fillRect(1, -8, 2, 2);
+
+    // Wizard Hat
+    ctx.fillStyle = '#5b21b6';
+    ctx.beginPath();
+    ctx.moveTo(0, -24); ctx.lineTo(-7, -10); ctx.lineTo(7, -10); ctx.fill();
+    ctx.fillRect(-12, -10, 24, 2);
+
+    // Wooden Staff
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(8, -8, 3, 20);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(7, -11, 5, 5);
 
     ctx.restore();
+  }
+
+  private distanceTo(e: Enemy) { return Math.hypot(e.x - this.x, e.y - this.y); }
+  private getClosestEnemy(enemies: Enemy[]): Enemy | null {
+    if (enemies.length === 0) return null;
+    return enemies.reduce((closest, current) => 
+      this.distanceTo(current) < this.distanceTo(closest) ? current : closest
+    );
   }
 }

@@ -14,12 +14,10 @@
 - [ ] Add simple FPS/performance debug mode.
 
 ## ⚔️ 2. REAL WARRIOR CHARACTER
-- [ ] Replace basic vector hero with a proper 2D warrior character.
-- [ ] Warrior should have recognizable armor, helmet/hair, body, legs and sword.
-- [ ] Add idle, walk and attack animations.
-- [ ] Character should **face the enemy being attacked**.
-- [ ] Sword swing direction must match target direction.
-- [ ] Add attack anticipation → swing → hit timing.
+- [X] Add idle, walk and attack animations.
+- [X] Character should **face the enemy being attacked**.
+- [X] Sword swing direction must match target direction.
+- [X] Add attack anticipation → swing → hit timing.
 - [ ] Add small hit reaction/impact feedback.
 - [ ] Keep character readable at normal gameplay zoom.
 

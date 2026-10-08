@@ -1,81 +1,127 @@
+import { Enemy } from "./Enemy";
+
+type AttackState = 'IDLE' | 'WINDUP' | 'SWING' | 'RECOVERY';
+
 export class Warrior {
-  public type = "warrior";
-  public x = 0;
-  public y = 0;
-  public speed = 200;
-  public hp = 100;
-  public maxHp = 100;
-  public attackRange = 140;
-  public damage = 25;
-  public attackCooldown = 0.6; 
+  x: number = window.innerWidth / 2;
+  y: number = window.innerHeight / 2;
+  speed: number = 200;
+  attackRange: number = 80;
+  damage: number = 25;
+  
+  state: AttackState = 'IDLE';
+  stateTimer: number = 0;
+  targetAngle: number = 0;
 
-  private facingRight = true;
+  windupTime = 150;
+  swingTime = 150; 
+  recoveryTime = 250;
 
-  public update(keys: Record<string, boolean>, dt: number, canvasBounds: { w: number; h: number }) {
-    let dx = 0, dy = 0;
-    if (keys["w"] || keys["arrowup"]) dy -= 1;
-    if (keys["s"] || keys["arrowdown"]) dy += 1;
-    if (keys["a"] || keys["arrowleft"]) dx -= 1;
-    if (keys["d"] || keys["arrowright"]) dx += 1;
+  update(dt: number, enemies: Enemy[], keys: Record<string, boolean>, onHit: Function) {
+    let dx = 0; let dy = 0;
+    if (keys['w'] || keys['ArrowUp']) dy -= 1;
+    if (keys['s'] || keys['ArrowDown']) dy += 1;
+    if (keys['a'] || keys['ArrowLeft']) dx -= 1;
+    if (keys['d'] || keys['ArrowRight']) dx += 1;
 
-    if (dx !== 0 && dy !== 0) {
-      const length = Math.sqrt(dx * dx + dy * dy);
-      dx /= length; dy /= length;
+    const mag = Math.hypot(dx, dy);
+    if (mag > 0) {
+      const moveSpeed = this.state === 'IDLE' ? this.speed : this.speed * 0.4;
+      this.x += (dx / mag) * moveSpeed * (dt / 1000);
+      this.y += (dy / mag) * moveSpeed * (dt / 1000);
     }
 
-    if (dx > 0) this.facingRight = true;
-    if (dx < 0) this.facingRight = false;
-
-    this.x += dx * this.speed * dt;
-    this.y += dy * this.speed * dt;
-    this.x = Math.max(20, Math.min(canvasBounds.w - 20, this.x));
-    this.y = Math.max(20, Math.min(canvasBounds.h - 20, this.y));
+    if (this.state === 'IDLE') {
+      const target = this.getClosestEnemy(enemies);
+      if (target && this.distanceTo(target) <= this.attackRange) {
+        this.state = 'WINDUP';
+        this.stateTimer = this.windupTime;
+        this.targetAngle = Math.atan2(target.y - this.y, target.x - this.x);
+      }
+    } 
+    else if (this.state === 'WINDUP') {
+      this.stateTimer -= dt;
+      if (this.stateTimer <= 0) {
+        this.state = 'SWING';
+        this.stateTimer = this.swingTime;
+        const target = this.getClosestEnemy(enemies);
+        if (target && this.distanceTo(target) <= this.attackRange) {
+           onHit(target, this.damage, this.targetAngle);
+        }
+      }
+    } 
+    else if (this.state === 'SWING') {
+      this.stateTimer -= dt;
+      if (this.stateTimer <= 0) {
+        this.state = 'RECOVERY';
+        this.stateTimer = this.recoveryTime;
+      }
+    } 
+    else if (this.state === 'RECOVERY') {
+      this.stateTimer -= dt;
+      if (this.stateTimer <= 0) {
+        this.state = 'IDLE';
+      }
+    }
   }
 
-  public draw(ctx: CanvasRenderingContext2D, gameTime: number, isMoving: boolean, timeSinceAttack: number) {
+  draw(ctx: CanvasRenderingContext2D) {
     ctx.save();
     ctx.translate(this.x, this.y);
 
-    ctx.strokeStyle = "rgba(190, 242, 100, 0.15)";
-    ctx.beginPath(); ctx.arc(0, 0, this.attackRange, 0, Math.PI * 2); ctx.stroke();
+    // --- Blocky Warrior Body ---
+    // Torso (Blue Tunic/Armor)
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillRect(-7, -2, 14, 12);
+    
+    // Legs (Dark Grey)
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(-5, 10, 4, 5);
+    ctx.fillRect(1, 10, 4, 5);
 
-    if (!this.facingRight) ctx.scale(-1, 1);
+    // Head (Silver Helmet)
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(-6, -12, 12, 10);
+    
+    // Helmet Visor/Eyes (Black)
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-4, -9, 8, 3);
+    // ---------------------------
 
-    const bobOffset = isMoving ? Math.sin(gameTime * 15) * 3 : Math.sin(gameTime * 3) * 1;
-    ctx.translate(0, bobOffset);
-    ctx.scale(1.5, 1.5);
+    ctx.restore();
 
-    ctx.fillStyle = "#334155";
-    ctx.fillRect(-6, 10, 5, 12); 
-    ctx.fillRect(2, 10, 5, 12);  
+    // Draw Curved Sword Slash (anchored to character center)
+    if (this.state !== 'IDLE') {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.targetAngle);
 
-    ctx.fillStyle = "#94a3b8"; ctx.fillRect(-9, -5, 18, 16);
-    ctx.fillStyle = "#78350f"; ctx.fillRect(-10, 8, 20, 3);
-    ctx.fillStyle = "#fbbf24"; ctx.fillRect(-2, 7, 5, 5);
+      let swingProgress = 0;
+      if (this.state === 'WINDUP') swingProgress = 0;
+      else if (this.state === 'SWING') swingProgress = 1 - (this.stateTimer / this.swingTime);
+      else if (this.state === 'RECOVERY') swingProgress = 1;
 
-    ctx.fillStyle = "#cbd5e1";
-    ctx.beginPath(); ctx.arc(-2, -2, 7, 0, Math.PI * 2); ctx.fill();
+      if (this.state === 'SWING' || this.state === 'RECOVERY') {
+        ctx.beginPath();
+        const startAngle = -Math.PI / 2;
+        const endAngle = startAngle + (swingProgress * Math.PI);
+        
+        ctx.arc(0, 0, 45, startAngle, endAngle);
+        ctx.strokeStyle = '#f8fafc';
+        ctx.lineWidth = 12 * (1 - (swingProgress === 1 ? this.stateTimer/this.recoveryTime : 0));
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
 
-    ctx.fillStyle = "#ffedd5"; ctx.fillRect(-5, -16, 10, 10);
-    ctx.fillStyle = "#475569";
-    ctx.beginPath(); ctx.arc(0, -15, 8, 0, Math.PI, true); ctx.fill();
-    ctx.fillRect(-9, -15, 18, 4);
-    ctx.fillStyle = "#ef4444"; ctx.fillRect(-2, -26, 4, 7);
-
-    ctx.save();
-    const isAttacking = timeSinceAttack < 0.15;
-    if (isAttacking) {
-      ctx.rotate(Math.PI / 2.5); ctx.translate(5, 5);
-    } else {
-      ctx.rotate(Math.PI / 12);
+      ctx.restore();
     }
-    
-    ctx.fillStyle = "#fbbf24"; ctx.fillRect(8, 0, 4, 4);
-    ctx.fillStyle = "#475569"; ctx.fillRect(7, -2, 6, 2); ctx.fillRect(7, 4, 6, 2);
-    ctx.fillStyle = "#e2e8f0"; ctx.fillRect(12, 1, 18, 3);
-    
-    ctx.beginPath(); ctx.moveTo(30, 1); ctx.lineTo(34, 2.5); ctx.lineTo(30, 4); ctx.fill();
-    ctx.restore();
-    ctx.restore();
+  }
+
+  private distanceTo(e: Enemy) { return Math.hypot(e.x - this.x, e.y - this.y); }
+  private getClosestEnemy(enemies: Enemy[]): Enemy | null {
+    if (enemies.length === 0) return null;
+    return enemies.reduce((closest, current) => 
+      this.distanceTo(current) < this.distanceTo(closest) ? current : closest
+    );
   }
 }
