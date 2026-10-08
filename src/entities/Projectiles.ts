@@ -5,13 +5,15 @@ export class MagicMissile {
   y: number;
   target: Enemy;
   speed: number = 400;
-  damage: number = 20;
+  damage: number;
   dead: boolean = false;
+  trail: {x: number, y: number}[] = [];
 
-  constructor(x: number, y: number, target: Enemy) {
+  constructor(x: number, y: number, target: Enemy, damage: number = 20) {
     this.x = x;
     this.y = y;
     this.target = target;
+    this.damage = damage;
   }
 
   update(dt: number, onHit: Function) {
@@ -24,6 +26,9 @@ export class MagicMissile {
     const dy = this.target.y - this.y;
     const mag = Math.hypot(dx, dy);
 
+    this.trail.push({x: this.x, y: this.y});
+    if (this.trail.length > 8) this.trail.shift();
+
     if (mag < 15) {
       onHit(this.target, this.damage, Math.atan2(dy, dx));
       this.dead = true;
@@ -34,9 +39,23 @@ export class MagicMissile {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = '#38bdf8'; // Glowing blue missile
-    ctx.shadowColor = '#38bdf8';
     ctx.shadowBlur = 10;
+    ctx.shadowColor = '#38bdf8';
+    
+    // Draw trail
+    if (this.trail.length > 0) {
+      ctx.beginPath();
+      ctx.moveTo(this.trail[0].x, this.trail[0].y);
+      for (let i = 1; i < this.trail.length; i++) {
+        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+      }
+      ctx.strokeStyle = `rgba(56, 189, 248, 0.5)`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+    
+    // Core
+    ctx.fillStyle = '#ffffff'; 
     ctx.beginPath();
     ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
     ctx.fill();

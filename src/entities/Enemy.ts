@@ -15,6 +15,7 @@ export class Enemy {
   angle: number = 0;
 
   hitFlashTimer: number = 0;
+  stunTimer: number = 0;
   knockbackX: number = 0;
   knockbackY: number = 0;
 
@@ -55,6 +56,10 @@ export class Enemy {
   update(dt: number, playerX: number, playerY: number, enemies: Enemy[], onEnemyShoot?: Function) {
     if (this.dead) return;
     if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+    if (this.stunTimer > 0) {
+      this.stunTimer -= dt;
+      if (this.stunTimer < 0) this.stunTimer = 0;
+    }
 
     // Apply knockback
     if (Math.abs(this.knockbackX) > 1 || Math.abs(this.knockbackY) > 1) {
@@ -68,6 +73,8 @@ export class Enemy {
     const dx = playerX - this.x;
     const dy = playerY - this.y;
     const mag = Math.hypot(dx, dy);
+
+    if (this.stunTimer > 0) return; // Stunned enemies cannot move or attack
 
     let isAttacking = false;
 
@@ -121,14 +128,17 @@ export class Enemy {
     }
   }
 
-  takeDamage(amount: number, angle?: number) {
+  takeDamage(amount: number, angle?: number, forceMult: number = 300) {
     this.hp -= amount;
     this.hitFlashTimer = 60;
     
+    // Apply micro-stun to prevent instant retaliation trading
+    this.stunTimer = Math.max(this.stunTimer, 200);
+    
     if (angle !== undefined) {
       // Squash & stretch implied by hitflash visually, knockback affected by mass
-      this.knockbackX = (Math.cos(angle) * 300) / this.mass;
-      this.knockbackY = (Math.sin(angle) * 300) / this.mass;
+      this.knockbackX = (Math.cos(angle) * forceMult) / this.mass;
+      this.knockbackY = (Math.sin(angle) * forceMult) / this.mass;
     }
 
     if (this.hp <= 0) {

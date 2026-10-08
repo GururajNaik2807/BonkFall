@@ -85,7 +85,7 @@ export default function App() {
 
       {s && started && <HUD s={s} game={game.current} />}
 
-      {s?.choices && (
+      {s?.choices && s.choices.length > 0 && (
         <div className="shade">
           <div className="power">
             <small>LEVEL {s.level}</small>
@@ -93,7 +93,7 @@ export default function App() {
             <div className="choices">
               {s.choices.map(c => (
                 <button key={c.id} onClick={() => game.current?.choose(c.id)}>
-                  <span>{c.icon}</span><b>{c.name}</b><i>Level {c.level}</i><p>{c.description}</p>
+                  <span>{c.icon}</span><b>{c.name}</b><i>Tier {c.tier + 1}</i><p>{c.description}</p>
                 </button>
               ))}
             </div>

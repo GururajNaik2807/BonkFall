@@ -202,4 +202,98 @@ export class BloodSplatter implements Effect {
     }
     ctx.restore();
   }
+}
+
+export class ShockwaveEffect implements Effect {
+  x: number;
+  y: number;
+  progress = 0;
+  duration = 400;
+
+  constructor(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  update(dt: number): boolean {
+    this.progress += dt / this.duration;
+    return this.progress >= 1;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    if (this.progress >= 1) return;
+    const alpha = 1 - Math.pow(this.progress, 2);
+    const radius = 150 * Math.pow(this.progress, 0.5);
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+    ctx.lineWidth = 4 * alpha;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+export class LightningEffect implements Effect {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  progress = 0;
+  duration = 200;
+  points: {x: number, y: number}[] = [];
+
+  constructor(x1: number, y1: number, x2: number, y2: number) {
+    this.x1 = x1;
+    this.y1 = y1;
+    this.x2 = x2;
+    this.y2 = y2;
+    
+    // Generate lightning jagged line
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const mag = Math.hypot(dx, dy);
+    const segments = Math.floor(mag / 20) + 1;
+    
+    this.points.push({x: x1, y: y1});
+    for (let i = 1; i < segments; i++) {
+      const p = i / segments;
+      const px = x1 + dx * p;
+      const py = y1 + dy * p;
+      const offset = (Math.random() - 0.5) * 40;
+      this.points.push({
+        x: px + (dy / mag) * offset,
+        y: py - (dx / mag) * offset
+      });
+    }
+    this.points.push({x: x2, y: y2});
+  }
+
+  update(dt: number): boolean {
+    this.progress += dt / this.duration;
+    return this.progress >= 1;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    if (this.progress >= 1) return;
+    const alpha = 1 - this.progress;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+    for (let i = 1; i < this.points.length; i++) {
+      ctx.lineTo(this.points[i].x, this.points[i].y);
+    }
+    
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#60a5fa';
+    ctx.strokeStyle = `rgba(191, 219, 254, ${alpha})`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
 }

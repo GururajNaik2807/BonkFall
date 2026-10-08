@@ -3,6 +3,8 @@ import { Mage } from "../entities/Mage";
 import { Enemy } from "../entities/Enemy";
 import { DeathSlash, HitImpact, ScreenShake, FloatingText, BloodSplatter, type Effect } from "../effects/Effects";
 import { EnemyProjectile, MagicMissile } from "../entities/Projectiles";
+import { UPGRADES, type Upgrade } from "../data/upgrades";
+import { AbilitiesManager } from "../entities/Abilities";
 import type { EnemyType } from "../entities/Enemy";
 import type { Snapshot, Result } from "../types";
 
@@ -27,6 +29,13 @@ export class Game {
   gameTime = 0;
   isPaused: boolean = false;
   isGameOver: boolean = false;
+  isLevelingUp: boolean = false;
+  
+  xp = 0;
+  nextXp = 100;
+  level = 1;
+  choices: Upgrade[] = [];
+  abilities: AbilitiesManager;
   
   screenShake: ScreenShake | null = null;
   
@@ -45,6 +54,8 @@ export class Game {
 
     this.resize();
     window.addEventListener("resize", () => this.resize());
+    
+    this.abilities = new AbilitiesManager(this);
   }
 
   resize() {
@@ -76,14 +87,23 @@ export class Game {
     this.gameTime = 0;
     this.wave = 1;
     this.waveTimer = 0;
+    this.xp = 0;
+    this.nextXp = 100;
+    this.level = 1;
     this.isPaused = false;
     this.isGameOver = false;
+    this.isLevelingUp = false;
+    this.choices = [];
+    
+    this.abilities = new AbilitiesManager(this);
+    UPGRADES.forEach(u => u.tier = 0);
+
     this.lastTime = performance.now();
     this.loop(this.lastTime);
   }
 
-  handleHit = (enemy: Enemy, damage: number, attackAngle: number) => {
-    enemy.takeDamage(damage, attackAngle);
+  handleHit = (enemy: Enemy, damage: number, attackAngle: number, forceMult: number = 300) => {
+    enemy.takeDamage(damage, attackAngle, forceMult);
     this.effects.push(new HitImpact(enemy.x, enemy.y));
     this.effects.push(new FloatingText(enemy.x, enemy.y - 20, Math.floor(damage).toString(), damage >= 25 ? '#ef4444' : '#fcd34d'));
     
@@ -94,8 +114,29 @@ export class Game {
 
     if (enemy.dead) {
       this.kills++;
+      this.xp += 10;
       this.effects.push(new BloodSplatter(enemy.x, enemy.y));
     }
+  }
+
+  triggerLevelUp() {
+    this.xp -= this.nextXp;
+    this.level++;
+    this.nextXp = Math.floor(100 * Math.pow(1.25, this.level - 1));
+    this.isLevelingUp = true;
+    
+    // Pick 3 random upgrades
+    const available = UPGRADES.filter(u => u.tier < u.maxTier);
+    this.choices = [];
+    while (this.choices.length < 3 && available.length > 0) {
+      const idx = Math.floor(Math.random() * available.length);
+      this.choices.push(available.splice(idx, 1)[0]);
+    }
+    
+    // Reset keys to prevent accidental movement
+    this.keys = {};
+    
+    this.updateHUD(); // Trigger UI
   }
 
   handleShoot = (projectile: MagicMissile) => {
@@ -123,7 +164,18 @@ export class Game {
     this.updateHUD(); // Notify React
   }
 
-  choose(id: string) {}
+  choose(id: string) {
+    if (!this.isLevelingUp) return;
+    const upgrade = UPGRADES.find(u => u.id === id);
+    if (upgrade) {
+      upgrade.apply(this);
+      upgrade.tier++;
+    }
+    this.isLevelingUp = false;
+    this.choices = [];
+    this.lastTime = performance.now(); // Prevent large dt jump
+    this.updateHUD();
+  }
 
   loop = (time: number) => {
     this.animationId = requestAnimationFrame(this.loop);
@@ -131,7 +183,7 @@ export class Game {
     const dt = time - this.lastTime;
     this.lastTime = time;
 
-    if (this.isPaused || this.isGameOver) {
+    if (this.isPaused || this.isGameOver || this.isLevelingUp) {
       this.draw(); // keep drawing
       return;
     }
@@ -143,6 +195,12 @@ export class Game {
 
   update(dt: number) {
     if (!this.player) return;
+    
+    if (this.xp >= this.nextXp && !this.isLevelingUp) {
+      this.triggerLevelUp();
+      return;
+    }
+    
     this.gameTime += dt / 1000;
 
     this.waveTimer += dt / 1000;
@@ -183,6 +241,8 @@ export class Game {
       const done = this.screenShake.update(dt);
       if (done) this.screenShake = null;
     }
+
+    this.abilities.update(dt);
 
     // Check Death
     if (this.player.hp <= 0 && !this.isGameOver) {
@@ -285,6 +345,9 @@ export class Game {
     this.enemies.forEach(e => e.draw(this.ctx));
     this.projectiles.forEach(p => p.draw(this.ctx));
     this.enemyProjectiles.forEach(p => p.draw(this.ctx));
+    
+    this.abilities.draw(this.ctx);
+    
     this.effects.forEach(effect => effect.draw(this.ctx));
     this.player.draw(this.ctx);
 
@@ -294,9 +357,10 @@ export class Game {
   updateHUD() {
     if (!this.player || this.isGameOver) return;
     this.setS({
-      hp: this.player.hp, maxHp: this.player.maxHp, xp: this.kills * 10, nextXp: 100, level: 1,
+      hp: this.player.hp, maxHp: this.player.maxHp, xp: this.xp, nextXp: this.nextXp, level: this.level,
       time: this.gameTime, wave: this.wave, mapName: "Verdant Expanse", kills: this.kills,
-      powerLevel: 1, paused: this.isPaused, playerAngle: this.player.targetAngle || 0
+      powerLevel: this.level, paused: this.isPaused || this.isLevelingUp, playerAngle: this.player.targetAngle || 0,
+      choices: this.choices
     });
   }
 
