@@ -1,5 +1,6 @@
 import { Enemy } from "./Enemy";
 import { KineticSlash, AuraParticle } from "../effects/Effects";
+import { audioManager } from "../engine/AudioManager";
 import type { AttackState } from "../types";
 
 export class Warrior {
@@ -96,7 +97,9 @@ export class Warrior {
         if (this.combo === 1) type = -1;
         else if (this.combo >= 2) { type = 0; }
         
+        const isFinisher = type === 0;
         addEffect(new KineticSlash(this.x, this.y, this.targetAngle, this.attackRange, type));
+        audioManager.playWarriorAttack(isFinisher);
         
         let hitAny = false;
         for (const target of enemies) {

@@ -1,6 +1,7 @@
 import { Enemy } from "./Enemy";
 import { MagicMissile } from "./Projectiles";
 import { ArcaneBlast } from "../effects/Effects";
+import { audioManager } from "../engine/AudioManager";
 
 export class Mage {
   x: number = window.innerWidth / 2;
@@ -51,6 +52,7 @@ export class Mage {
           const angle = angleToTarget + (i - Math.floor(spreadCount/2)) * 0.25;
           onShoot(new MagicMissile(this.x, this.y - 10, angle, this.damage * this.damageMult));
         }
+        audioManager.playMageAttack(false);
         this.cooldownTimer = this.attackSpeed / this.attackSpeedMult;
       }
     }
@@ -61,8 +63,8 @@ export class Mage {
     } else {
       const cluster = this.findDensestCluster(enemies);
       if (cluster) {
-        // Fire Arcane Blast
         addEffect(new ArcaneBlast(cluster.x, cluster.y));
+        audioManager.playMageAttack(true);
         for (const e of enemies) {
           if (e.dead) continue;
           if (Math.hypot(e.x - cluster.x, e.y - cluster.y) < 150) { // 150 radius blast
