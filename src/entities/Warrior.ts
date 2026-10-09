@@ -1,5 +1,5 @@
 import { Enemy } from "./Enemy";
-import { PixelSlash, AuraParticle } from "../effects/Effects";
+import { KineticSlash, AuraParticle } from "../effects/Effects";
 import type { AttackState } from "../types";
 
 export class Warrior {
@@ -21,8 +21,8 @@ export class Warrior {
   
   dashCooldown: number = 0;
 
-  windupTime = 150;
-  swingTime = 150; 
+  windupTime = 60;
+  swingTime = 80; 
   recoveryTime = 250;
   
   moveAngle: number = 0;
@@ -96,7 +96,7 @@ export class Warrior {
         if (this.combo === 1) type = -1;
         else if (this.combo >= 2) { type = 0; }
         
-        addEffect(new PixelSlash(this.x, this.y, this.targetAngle, this.attackRange, type));
+        addEffect(new KineticSlash(this.x, this.y, this.targetAngle, this.attackRange, type));
         
         let hitAny = false;
         for (const target of enemies) {
@@ -113,7 +113,7 @@ export class Warrior {
             if (hit) {
               const dmgMult = type === 0 ? 2 : 1;
               const kbMult = type === 0 ? 900 : 600;
-              onHit(target, this.damage * this.damageMult * dmgMult, this.targetAngle, kbMult);
+              onHit(target, this.damage * this.damageMult * dmgMult, this.targetAngle, kbMult, true); // true flags it as a heavy melee strike
               hitAny = true;
             }
           }

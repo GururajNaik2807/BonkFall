@@ -1,7 +1,7 @@
 import { Warrior } from "../entities/Warrior";
 import { Mage } from "../entities/Mage";
 import { Enemy } from "../entities/Enemy";
-import { DeathSlash, HitImpact, ScreenShake, FloatingText, BloodSplatter, type Effect } from "../effects/Effects";
+import { DeathSlash, HitImpact, ScreenShake, FloatingText, BloodSplatter, SparkParticle, type Effect } from "../effects/Effects";
 import { EnemyProjectile, MagicMissile } from "../entities/Projectiles";
 import { UPGRADES, type Upgrade } from "../data/upgrades";
 import { AbilitiesManager } from "../entities/Abilities";
@@ -42,6 +42,8 @@ export class Game {
   zoom = 1.5; // Camera zoom
   wave = 1;
   waveTimer = 0;
+  
+  hitStopTimer: number = 0;
 
   constructor(host: HTMLDivElement, setS: any, setR: any) {
     this.canvas = document.createElement("canvas");
@@ -97,19 +99,32 @@ export class Game {
     
     this.abilities = new AbilitiesManager(this);
     UPGRADES.forEach(u => u.tier = 0);
+    
+    this.hitStopTimer = 0;
 
     this.lastTime = performance.now();
     this.loop(this.lastTime);
   }
 
-  handleHit = (enemy: Enemy, damage: number, attackAngle: number, forceMult: number = 300) => {
+  triggerHitStop = (duration: number) => {
+    if (this.hitStopTimer < duration) this.hitStopTimer = duration;
+  }
+
+  handleHit = (enemy: Enemy, damage: number, attackAngle: number, forceMult: number = 300, isMelee: boolean = false) => {
     enemy.takeDamage(damage, attackAngle, forceMult);
     this.effects.push(new HitImpact(enemy.x, enemy.y));
     this.effects.push(new FloatingText(enemy.x, enemy.y - 20, Math.floor(damage).toString(), damage >= 25 ? '#ef4444' : '#fcd34d'));
     
-    // Tiny screen shake for heavy attacks
     if (damage >= 25 && !this.screenShake) {
-      this.screenShake = new ScreenShake(2);
+      this.screenShake = new ScreenShake(isMelee ? 4 : 2);
+    }
+    
+    if (isMelee) {
+      this.triggerHitStop(40); // 40ms frame freeze
+      // Burst of kinetic sparks
+      for(let i = 0; i < 4; i++) {
+        this.effects.push(new SparkParticle(enemy.x, enemy.y, attackAngle));
+      }
     }
 
     if (enemy.dead) {
@@ -189,6 +204,12 @@ export class Game {
 
     if (this.isPaused || this.isGameOver || this.isLevelingUp) {
       this.draw(); // keep drawing
+      return;
+    }
+
+    if (this.hitStopTimer > 0) {
+      this.hitStopTimer -= dt;
+      this.draw(); // Draw frozen frame
       return;
     }
 

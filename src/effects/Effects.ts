@@ -298,34 +298,87 @@ export class LightningEffect implements Effect {
   }
 }
 
-export class PixelSlash implements Effect {
-  x: number; y: number; angle: number; progress = 0; duration = 200; radius: number;
+export class KineticSlash implements Effect {
+  x: number; y: number; angle: number; progress = 0; duration = 120; radius: number;
   type: 1 | -1 | 0;
   constructor(x: number, y: number, angle: number, radius: number, type: 1 | -1 | 0) {
     this.x = x; this.y = y; this.angle = angle; this.radius = radius; this.type = type;
-    if (type === 0) this.duration = 300;
+    if (type === 0) this.duration = 180;
   }
   update(dt: number) { this.progress += dt / this.duration; return this.progress >= 1; }
   draw(ctx: CanvasRenderingContext2D) {
     if (this.progress >= 1) return;
-    const alpha = 1 - this.progress;
+    const alpha = 1 - Math.pow(this.progress, 2);
+    
     ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
-    ctx.fillStyle = `rgba(56, 189, 248, ${alpha})`;
-    ctx.shadowBlur = 10; ctx.shadowColor = '#0ea5e9';
-    const numBlocks = this.type === 0 ? 32 : 12;
+    
     const startAngle = this.type === 0 ? 0 : (this.type === 1 ? -Math.PI * 0.6 : Math.PI * 0.6);
     const endAngle = this.type === 0 ? Math.PI * 2 : (this.type === 1 ? Math.PI * 0.6 : -Math.PI * 0.6);
-    for (let i = 0; i <= this.progress * numBlocks; i++) {
-      const p = i / numBlocks;
-      const a = startAngle + (endAngle - startAngle) * p;
-      const dist = this.type === 0 ? this.radius : this.radius * (0.8 + 0.2 * Math.sin(p * Math.PI));
-      const px = Math.cos(a) * dist; const py = Math.sin(a) * dist;
-      const size = 16 * (1 - this.progress * 0.3);
-      ctx.fillRect(px - size/2, py - size/2, size, size);
-      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-      ctx.fillRect(px - size/4, py - size/4, size/2, size/2);
-      ctx.fillStyle = `rgba(56, 189, 248, ${alpha})`;
+    
+    const sweepRange = endAngle - startAngle;
+    const currentLead = startAngle + sweepRange * Math.min(1, this.progress * 1.2);
+    const currentTail = startAngle + sweepRange * Math.max(0, this.progress - 0.2);
+
+    ctx.lineCap = 'round';
+    ctx.shadowBlur = 15; 
+    ctx.shadowColor = '#0ea5e9';
+    
+    const steps = 15;
+    for(let i=0; i<=steps; i++) {
+        const stepProgress = i / steps;
+        const segmentAngle = currentTail + (currentLead - currentTail) * stepProgress;
+        const nextSegmentAngle = currentTail + (currentLead - currentTail) * (stepProgress + (1/steps));
+        
+        ctx.beginPath();
+        if (this.type === 1 || this.type === 0) {
+            ctx.arc(0, 0, this.radius, segmentAngle, nextSegmentAngle);
+        } else {
+            ctx.arc(0, 0, this.radius, nextSegmentAngle, segmentAngle, true);
+        }
+        
+        ctx.strokeStyle = `rgba(186, 230, 253, ${alpha * stepProgress})`;
+        ctx.lineWidth = 4 + (stepProgress * 16);
+        ctx.stroke();
     }
+    
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius, currentLead - (this.type === -1 ? -0.1 : 0.1), currentLead, this.type === -1);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 20;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+}
+
+export class SparkParticle implements Effect {
+  x: number; y: number; progress = 0; duration: number;
+  vx: number; vy: number; size: number;
+  constructor(x: number, y: number, angle: number) {
+    this.x = x; this.y = y;
+    const spread = (Math.random() - 0.5) * 1.5;
+    const speed = 300 + Math.random() * 400;
+    this.vx = Math.cos(angle + spread) * speed;
+    this.vy = Math.sin(angle + spread) * speed;
+    this.duration = 150 + Math.random() * 150;
+    this.size = 2 + Math.random() * 3;
+  }
+  update(dt: number) { 
+    this.progress += dt / this.duration; 
+    this.x += this.vx * (dt / 1000); this.y += this.vy * (dt / 1000);
+    this.vx *= 0.9; this.vy *= 0.9;
+    return this.progress >= 1; 
+  }
+  draw(ctx: CanvasRenderingContext2D) {
+    if (this.progress >= 1) return;
+    const alpha = 1 - this.progress;
+    ctx.fillStyle = `rgba(253, 186, 116, ${alpha})`; 
+    ctx.shadowBlur = 8; ctx.shadowColor = '#f97316';
+    
+    const stretch = 1 + Math.hypot(this.vx, this.vy) / 50;
+    ctx.save(); ctx.translate(this.x, this.y); 
+    ctx.rotate(Math.atan2(this.vy, this.vx));
+    ctx.fillRect(-this.size * stretch / 2, -this.size / 2, this.size * stretch, this.size);
     ctx.restore();
   }
 }
