@@ -3,38 +3,36 @@ import { Enemy } from "./Enemy";
 export class MagicMissile {
   x: number;
   y: number;
-  target: Enemy;
+  vx: number;
+  vy: number;
   speed: number = 400;
   damage: number;
   dead: boolean = false;
   trail: {x: number, y: number}[] = [];
 
-  constructor(x: number, y: number, target: Enemy, damage: number = 20) {
+  constructor(x: number, y: number, angle: number, damage: number = 20) {
     this.x = x;
     this.y = y;
-    this.target = target;
+    this.vx = Math.cos(angle) * this.speed;
+    this.vy = Math.sin(angle) * this.speed;
     this.damage = damage;
   }
 
-  update(dt: number, onHit: Function) {
-    if (this.target.dead) {
-      this.dead = true; // Fizzle out if target dies before impact
-      return;
-    }
-
-    const dx = this.target.x - this.x;
-    const dy = this.target.y - this.y;
-    const mag = Math.hypot(dx, dy);
-
+  update(dt: number, enemies: Enemy[], onHit: Function) {
     this.trail.push({x: this.x, y: this.y});
     if (this.trail.length > 8) this.trail.shift();
 
-    if (mag < 15) {
-      onHit(this.target, this.damage, Math.atan2(dy, dx));
-      this.dead = true;
-    } else {
-      this.x += (dx / mag) * this.speed * (dt / 1000);
-      this.y += (dy / mag) * this.speed * (dt / 1000);
+    this.x += this.vx * (dt / 1000);
+    this.y += this.vy * (dt / 1000);
+
+    for (const enemy of enemies) {
+      if (enemy.dead) continue;
+      const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+      if (dist < enemy.radius + 10) {
+        onHit(enemy, this.damage, Math.atan2(this.vy, this.vx), 150);
+        this.dead = true;
+        break;
+      }
     }
   }
 
@@ -54,12 +52,10 @@ export class MagicMissile {
       ctx.stroke();
     }
     
-    // Core
+    // Core pixelated bolt
     ctx.fillStyle = '#ffffff'; 
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0; // Reset shadow
+    ctx.fillRect(this.x - 3, this.y - 3, 6, 6);
+    ctx.shadowBlur = 0; 
   }
 }
 
@@ -94,7 +90,7 @@ export class EnemyProjectile {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = '#ef4444'; // Red
+    ctx.fillStyle = '#ef4444'; 
     ctx.shadowColor = '#ef4444';
     ctx.shadowBlur = 10;
     ctx.beginPath();

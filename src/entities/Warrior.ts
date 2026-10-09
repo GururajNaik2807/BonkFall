@@ -1,11 +1,12 @@
 import { Enemy } from "./Enemy";
+import { PixelSlash, AuraParticle } from "../effects/Effects";
 import type { AttackState } from "../types";
 
 export class Warrior {
   x: number = window.innerWidth / 2;
   y: number = window.innerHeight / 2;
   speed: number = 200;
-  attackRange: number = 100; // Increased range
+  attackRange: number = 100;
   damage: number = 25;
   damageMult = 1;
   attackSpeedMult = 1;
@@ -25,10 +26,25 @@ export class Warrior {
   recoveryTime = 250;
   
   moveAngle: number = 0;
+  
+  // Combo System
+  combo: number = 0;
+  comboResetTimer: number = 0;
+  auraIntensity: number = 0;
 
-  update(dt: number, enemies: Enemy[], keys: Record<string, boolean>, onHit: Function) {
+  update(dt: number, enemies: Enemy[], keys: Record<string, boolean>, onHit: Function, onShoot: Function, addEffect: Function) {
     if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
     if (this.dashCooldown > 0) this.dashCooldown -= dt;
+    if (this.comboResetTimer > 0) {
+      this.comboResetTimer -= dt;
+      if (this.comboResetTimer <= 0) this.combo = 0;
+    }
+    
+    // Aura logic
+    this.auraIntensity = Math.min(5, this.combo * 1.5);
+    if (this.auraIntensity > 0 && Math.random() < 0.2 + this.auraIntensity * 0.1) {
+      addEffect(new AuraParticle(this.x, this.y + 10, this.auraIntensity));
+    }
 
     let dx = 0; let dy = 0;
     if (keys['w'] || keys['ArrowUp']) dy -= 1;
@@ -55,7 +71,7 @@ export class Warrior {
     }
 
     if (mag > 0) {
-      const moveSpeed = this.state === 'IDLE' ? this.speed : this.speed * 0.8; // High mobility during swings
+      const moveSpeed = this.state === 'IDLE' ? this.speed : this.speed * 0.8;
       this.x += (dx / mag) * moveSpeed * (dt / 1000);
       this.y += (dy / mag) * moveSpeed * (dt / 1000);
       this.moveAngle = Math.atan2(dy, dx);
@@ -74,8 +90,14 @@ export class Warrior {
       if (this.stateTimer <= 0) {
         this.state = 'SWING';
         this.stateTimer = this.swingTime / this.attackSpeedMult;
+        this.comboResetTimer = 1500; // 1.5s to chain next attack
         
-        // Whirlwind / Wide Cleave
+        let type: 1 | -1 | 0 = 1;
+        if (this.combo === 1) type = -1;
+        else if (this.combo >= 2) { type = 0; }
+        
+        addEffect(new PixelSlash(this.x, this.y, this.targetAngle, this.attackRange, type));
+        
         let hitAny = false;
         for (const target of enemies) {
           if (target.dead) continue;
@@ -84,16 +106,24 @@ export class Warrior {
             const angleToTarget = Math.atan2(target.y - this.y, target.x - this.x);
             let diff = Math.abs(angleToTarget - this.targetAngle);
             if (diff > Math.PI) diff = Math.PI * 2 - diff;
-            if (diff < Math.PI * 0.6) { // ~210-degree cleave
-              onHit(target, this.damage * this.damageMult, this.targetAngle, 600); // 600 force knockback
+            
+            // Finisher is 360, otherwise 210-degree
+            const hit = type === 0 ? true : diff < Math.PI * 0.6;
+            
+            if (hit) {
+              const dmgMult = type === 0 ? 2 : 1;
+              const kbMult = type === 0 ? 900 : 600;
+              onHit(target, this.damage * this.damageMult * dmgMult, this.targetAngle, kbMult);
               hitAny = true;
             }
           }
         }
+        
         if (hitAny) {
-          // Bloodlust passive heal
           this.hp = Math.min(this.maxHp, this.hp + 2);
         }
+        
+        this.combo = type === 0 ? 0 : this.combo + 1;
       }
     } 
     else if (this.state === 'SWING') {
@@ -119,7 +149,6 @@ export class Warrior {
     const bob = Math.sin(time / 150) * 2;
     const tilt = this.state === 'IDLE' ? (Math.cos(this.moveAngle) * 0.1) : 0;
     
-    // Weapon recoil
     let recoilX = 0; let recoilY = 0;
     if (this.state === 'RECOVERY') {
        recoilX = Math.cos(this.targetAngle) * 4;
@@ -129,7 +158,6 @@ export class Warrior {
     ctx.rotate(tilt);
     ctx.translate(recoilX, recoilY + bob);
 
-    // Cape/Cloak
     ctx.fillStyle = '#7f1d1d';
     ctx.beginPath();
     ctx.moveTo(-10, -5);
@@ -138,20 +166,16 @@ export class Warrior {
     ctx.quadraticCurveTo(20 + Math.cos(time/120)*5, 15, 10, -5);
     ctx.fill();
 
-    // Body (Heavy Armor)
     ctx.fillStyle = this.hitFlashTimer > 0 ? '#ffffff' : '#334155';
     ctx.fillRect(-12, -8, 24, 18);
     
-    // Pauldrons
     ctx.fillStyle = this.hitFlashTimer > 0 ? '#ffffff' : '#94a3b8';
     ctx.beginPath(); ctx.arc(-14, -6, 6, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(14, -6, 6, 0, Math.PI*2); ctx.fill();
 
-    // Head / Spartan Helm
     ctx.fillStyle = this.hitFlashTimer > 0 ? '#ffffff' : '#cbd5e1';
     ctx.fillRect(-8, -18, 16, 14);
     
-    // Glowing Visor
     ctx.fillStyle = '#fbbf24';
     ctx.shadowBlur = 8;
     ctx.shadowColor = '#fbbf24';
@@ -159,41 +183,6 @@ export class Warrior {
     ctx.shadowBlur = 0;
     
     ctx.restore();
-
-    // Weapon Swing Effect
-    if (this.state !== 'IDLE') {
-      ctx.save();
-      ctx.translate(this.x, this.y);
-      ctx.rotate(this.targetAngle);
-
-      let swingProgress = 0;
-      if (this.state === 'WINDUP') swingProgress = 0;
-      else if (this.state === 'SWING') swingProgress = 1 - (this.stateTimer / (this.swingTime / this.attackSpeedMult));
-      else if (this.state === 'RECOVERY') swingProgress = 1;
-
-      if (this.state === 'SWING' || this.state === 'RECOVERY') {
-        const startAngle = -Math.PI * 0.6;
-        const endAngle = startAngle + (swingProgress * Math.PI * 1.2);
-        
-        ctx.beginPath();
-        ctx.arc(0, 0, this.attackRange, startAngle, endAngle);
-        
-        ctx.strokeStyle = '#38bdf8';
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#0ea5e9';
-        const decay = this.state === 'RECOVERY' ? (this.stateTimer / (this.recoveryTime / this.attackSpeedMult)) : 1;
-        ctx.lineWidth = 18 * decay;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(0, 0, this.attackRange, startAngle, endAngle);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 6 * decay;
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
   }
 
   private distanceTo(e: Enemy) { return Math.hypot(e.x - this.x, e.y - this.y); }

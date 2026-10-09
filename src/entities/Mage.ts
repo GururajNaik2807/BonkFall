@@ -1,6 +1,6 @@
 import { Enemy } from "./Enemy";
 import { MagicMissile } from "./Projectiles";
-import type { AttackState } from "../types";
+import { ArcaneBlast } from "../effects/Effects";
 
 export class Mage {
   x: number = window.innerWidth / 2;
@@ -13,13 +13,17 @@ export class Mage {
   hitFlashTimer: number = 0;
   
   damage: number = 20;
+  damageMult = 1;
+  attackSpeedMult = 1;
 
   cooldownTimer: number = 0;
   attackSpeed: number = 600; 
   
+  arcaneBlastTimer: number = 3000;
+  
   moveAngle: number = 0;
 
-  update(dt: number, enemies: Enemy[], keys: Record<string, boolean>, onHit: Function, onShoot: Function) {
+  update(dt: number, enemies: Enemy[], keys: Record<string, boolean>, onHit: Function, onShoot: Function, addEffect: Function) {
     if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
     
     let dx = 0; let dy = 0;
@@ -35,13 +39,38 @@ export class Mage {
       this.moveAngle = Math.atan2(dy, dx);
     }
     
+    // Primary Spread Attack
     if (this.cooldownTimer > 0) {
       this.cooldownTimer -= dt;
     } else {
       const target = this.getClosestEnemy(enemies);
       if (target && this.distanceTo(target) <= this.attackRange) {
-        onShoot(new MagicMissile(this.x, this.y - 10, target, this.damage));
-        this.cooldownTimer = this.attackSpeed;
+        const spreadCount = 3;
+        const angleToTarget = Math.atan2(target.y - this.y, target.x - this.x);
+        for (let i = 0; i < spreadCount; i++) {
+          const angle = angleToTarget + (i - Math.floor(spreadCount/2)) * 0.25;
+          onShoot(new MagicMissile(this.x, this.y - 10, angle, this.damage * this.damageMult));
+        }
+        this.cooldownTimer = this.attackSpeed / this.attackSpeedMult;
+      }
+    }
+    
+    // Secondary Arcane Blast
+    if (this.arcaneBlastTimer > 0) {
+      this.arcaneBlastTimer -= dt;
+    } else {
+      const cluster = this.findDensestCluster(enemies);
+      if (cluster) {
+        // Fire Arcane Blast
+        addEffect(new ArcaneBlast(cluster.x, cluster.y));
+        for (const e of enemies) {
+          if (e.dead) continue;
+          if (Math.hypot(e.x - cluster.x, e.y - cluster.y) < 150) { // 150 radius blast
+             const a = Math.atan2(e.y - cluster.y, e.x - cluster.x);
+             onHit(e, this.damage * this.damageMult * 3, a, 400); 
+          }
+        }
+        this.arcaneBlastTimer = 4000 / this.attackSpeedMult; // Every 4s roughly
       }
     }
   }
@@ -55,7 +84,6 @@ export class Mage {
     
     ctx.translate(0, bob);
     
-    // Coat Tails (Flowing behind)
     ctx.fillStyle = '#4c1d95';
     ctx.beginPath();
     ctx.moveTo(-8, 5);
@@ -64,7 +92,6 @@ export class Mage {
     ctx.quadraticCurveTo(15 + Math.sin(time/120)*4, 20, 8, 5);
     ctx.fill();
 
-    // Body (Sleek Coat)
     ctx.fillStyle = this.hitFlashTimer > 0 ? '#ffffff' : '#5b21b6';
     ctx.beginPath();
     ctx.moveTo(-10, -10);
@@ -73,19 +100,16 @@ export class Mage {
     ctx.lineTo(-12, 10);
     ctx.fill();
     
-    // Head / Hood
     ctx.fillStyle = this.hitFlashTimer > 0 ? '#ffffff' : '#2e1065';
     ctx.beginPath();
     ctx.arc(0, -14, 10, 0, Math.PI * 2);
     ctx.fill();
     
-    // Glowing Visor/Runes on Face
     ctx.fillStyle = '#06b6d4';
     ctx.shadowBlur = 10;
     ctx.shadowColor = '#06b6d4';
     ctx.fillRect(-6, -16, 12, 3);
     
-    // Energy Accents (Floating Hands)
     const handBob = Math.cos(time/150) * 3;
     ctx.beginPath();
     ctx.arc(-16, -2 + handBob, 4, 0, Math.PI*2);
@@ -93,14 +117,20 @@ export class Mage {
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Staff / Runic Weapon
     ctx.fillStyle = '#92400e';
     ctx.fillRect(14, -8 - handBob, 3, 24);
     
-    // Staff Core Crystal
     ctx.fillStyle = '#38bdf8';
     ctx.shadowBlur = 15;
     ctx.shadowColor = '#38bdf8';
+    
+    // If charging blast, make staff glow intense
+    if (this.arcaneBlastTimer < 500) {
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = '#a855f7';
+      ctx.fillStyle = '#d946ef';
+    }
+    
     ctx.beginPath();
     ctx.moveTo(15.5, -14 - handBob);
     ctx.lineTo(19, -9 - handBob);
@@ -125,5 +155,24 @@ export class Mage {
       }
     }
     return closest;
+  }
+  
+  private findDensestCluster(enemies: Enemy[]): Enemy | null {
+    if (enemies.length === 0) return null;
+    let maxNeighbors = -1;
+    let best = null;
+    for (const e of enemies) {
+      if (e.dead || this.distanceTo(e) > 600) continue; // Out of range for blast
+      let neighbors = 0;
+      for (const other of enemies) {
+        if (other === e || other.dead) continue;
+        if (Math.hypot(e.x - other.x, e.y - other.y) < 150) neighbors++;
+      }
+      if (neighbors > maxNeighbors) {
+        maxNeighbors = neighbors;
+        best = e;
+      }
+    }
+    return best || this.getClosestEnemy(enemies);
   }
 }

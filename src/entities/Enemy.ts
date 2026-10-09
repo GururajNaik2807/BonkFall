@@ -3,6 +3,8 @@ export type EnemyType = 'grunt' | 'swarmer' | 'brute' | 'ranged';
 export class Enemy {
   x: number;
   y: number;
+  vx: number = 0;
+  vy: number = 0;
   type: EnemyType;
   isElite: boolean;
 
@@ -61,22 +63,26 @@ export class Enemy {
       if (this.stunTimer < 0) this.stunTimer = 0;
     }
 
-    // Apply knockback
+    // Apply knockback override
     if (Math.abs(this.knockbackX) > 1 || Math.abs(this.knockbackY) > 1) {
       this.x += this.knockbackX * (dt / 1000);
       this.y += this.knockbackY * (dt / 1000);
       this.knockbackX *= 0.8;
       this.knockbackY *= 0.8;
-      return; // Can't move while knocked back
+      this.vx = 0;
+      this.vy = 0;
+      return; 
     }
+
+    if (this.stunTimer > 0) return; // Stunned enemies cannot move or attack
 
     const dx = playerX - this.x;
     const dy = playerY - this.y;
     const mag = Math.hypot(dx, dy);
 
-    if (this.stunTimer > 0) return; // Stunned enemies cannot move or attack
-
     let isAttacking = false;
+    let targetVx = 0;
+    let targetVy = 0;
 
     if (this.type === 'ranged') {
       if (mag < 250) {
@@ -87,13 +93,16 @@ export class Enemy {
           this.attackTimer = 2000 + Math.random() * 1000;
         }
       } else {
-        this.attackTimer = 2000; // reset
+        this.attackTimer = 2000; 
       }
     }
 
-    if (isAttacking) return; // Ranged enemies stop to shoot
+    if (!isAttacking && mag > this.radius + 5) {
+      targetVx = (dx / mag) * this.speed;
+      targetVy = (dy / mag) * this.speed;
+    }
 
-    // Separation forces
+    // Soft Collision / Repulsion
     let sepX = 0;
     let sepY = 0;
     let neighbors = 0;
@@ -101,42 +110,41 @@ export class Enemy {
     for (const other of enemies) {
       if (other === this || other.dead) continue;
       const dist = Math.hypot(this.x - other.x, this.y - other.y);
-      const minSep = this.radius + other.radius + 2;
+      const minSep = this.radius + other.radius + 5;
       if (dist < minSep && dist > 0) {
-        sepX += (this.x - other.x) / dist;
-        sepY += (this.y - other.y) / dist;
+        const force = (minSep - dist) / minSep;
+        sepX -= ((other.x - this.x) / dist) * force * 300; 
+        sepY -= ((other.y - this.y) / dist) * force * 300;
         neighbors++;
       }
     }
     
     if (neighbors > 0) {
-      sepX /= neighbors;
-      sepY /= neighbors;
+      targetVx += sepX;
+      targetVy += sepY;
     }
 
-    const dirX = (mag > 0 ? dx / mag : 0) + sepX * 1.5;
-    const dirY = (mag > 0 ? dy / mag : 0) + sepY * 1.5;
-    const dirMag = Math.hypot(dirX, dirY);
+    // Velocity Damping (Lerping current velocity to target velocity)
+    const damping = 8;
+    this.vx += (targetVx - this.vx) * damping * (dt / 1000);
+    this.vy += (targetVy - this.vy) * damping * (dt / 1000);
 
-    if (dirMag > 0.001) {
-      this.angle = Math.atan2(dirY, dirX);
+    const vMag = Math.hypot(this.vx, this.vy);
+    if (vMag > 0.001) {
+      this.angle = Math.atan2(this.vy, this.vx);
     }
 
-    if (mag > this.radius + 5) {
-      this.x += (dirX / dirMag) * this.speed * (dt / 1000);
-      this.y += (dirY / dirMag) * this.speed * (dt / 1000);
-    }
+    this.x += this.vx * (dt / 1000);
+    this.y += this.vy * (dt / 1000);
   }
 
   takeDamage(amount: number, angle?: number, forceMult: number = 300) {
     this.hp -= amount;
     this.hitFlashTimer = 60;
     
-    // Apply micro-stun to prevent instant retaliation trading
     this.stunTimer = Math.max(this.stunTimer, 200);
     
     if (angle !== undefined) {
-      // Squash & stretch implied by hitflash visually, knockback affected by mass
       this.knockbackX = (Math.cos(angle) * forceMult) / this.mass;
       this.knockbackY = (Math.sin(angle) * forceMult) / this.mass;
     }
@@ -154,11 +162,9 @@ export class Enemy {
     const time = performance.now();
 
     if (isHit) {
-      // Squash and stretch when hit
       ctx.scale(1.3, 0.7);
     }
 
-    // Rotate to face movement direction
     ctx.rotate(this.angle);
 
     ctx.shadowBlur = isHit ? 0 : 6;
@@ -175,7 +181,6 @@ export class Enemy {
     ctx.beginPath();
     
     if (this.type === 'swarmer') {
-      // Spiky teardrop/arachnid
       const jitter = Math.sin(time / 50) * 2;
       ctx.moveTo(this.radius + jitter, 0);
       ctx.lineTo(-this.radius, -this.radius + jitter);
@@ -185,7 +190,6 @@ export class Enemy {
       ctx.fill();
       if (!isHit) ctx.stroke();
 
-      // Twitching legs
       ctx.beginPath();
       ctx.moveTo(0, 0); ctx.lineTo(-this.radius, -this.radius * 1.5 + jitter);
       ctx.moveTo(0, 0); ctx.lineTo(-this.radius, this.radius * 1.5 - jitter);
@@ -194,14 +198,12 @@ export class Enemy {
       ctx.strokeStyle = isHit ? '#ffffff' : '#1a080c';
       ctx.stroke();
 
-      // Slit eye
       ctx.fillStyle = isHit ? '#000' : '#f59e0b';
       ctx.shadowBlur = isHit ? 0 : 8;
       ctx.shadowColor = '#f59e0b';
       ctx.fillRect(this.radius / 2, -2, 3, 4);
       
     } else if (this.type === 'brute') {
-      // Bulky, asymmetric jagged mass
       const nodes = 7;
       for (let i = 0; i < nodes; i++) {
         const a = (i / nodes) * Math.PI * 2;
@@ -213,7 +215,6 @@ export class Enemy {
       ctx.fill();
       if (!isHit) ctx.stroke();
 
-      // Multiple pinpoint eyes
       ctx.fillStyle = isHit ? '#000' : '#ef4444';
       ctx.shadowBlur = isHit ? 0 : 10;
       ctx.shadowColor = '#ef4444';
@@ -223,14 +224,12 @@ export class Enemy {
       ctx.arc(this.radius / 3, -10, 1.5, 0, Math.PI*2);
       ctx.fill();
 
-    } else { // 'ranged' or 'grunt' -> Stalker / Lurker
-      // Floating parasite/eyeball
+    } else { 
       const r = this.radius + Math.sin(time / 100) * 2;
       ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();
       if (!isHit) ctx.stroke();
       
-      // Undulating tail tendrils behind
       ctx.beginPath();
       ctx.moveTo(-r, 0);
       ctx.quadraticCurveTo(-r * 2, Math.sin(time / 80) * 10, -r * 3, Math.sin(time / 100) * 5);
@@ -239,14 +238,12 @@ export class Enemy {
       ctx.strokeStyle = isHit ? '#ffffff' : '#5c0d11';
       ctx.stroke();
 
-      // Giant Eye
       ctx.fillStyle = isHit ? '#000' : '#1a080c';
       ctx.shadowBlur = 0;
       ctx.beginPath();
       ctx.arc(2, 0, r * 0.6, 0, Math.PI*2);
       ctx.fill();
       
-      // Pupil (pointing forward)
       ctx.fillStyle = isHit ? '#fff' : '#f59e0b';
       ctx.shadowBlur = isHit ? 0 : 8;
       ctx.shadowColor = '#f59e0b';
@@ -254,7 +251,6 @@ export class Enemy {
       ctx.arc(4, 0, r * 0.3, 0, Math.PI*2);
       ctx.fill();
 
-      // Telegraph if ranged
       if (this.type === 'ranged' && this.attackTimer < 1000 && this.attackTimer > 0) {
         ctx.beginPath();
         ctx.arc(0, 0, this.radius * 2.5, 0, Math.PI * 2);

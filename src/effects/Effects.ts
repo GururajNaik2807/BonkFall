@@ -296,4 +296,91 @@ export class LightningEffect implements Effect {
     ctx.shadowBlur = 0;
     ctx.restore();
   }
+}
+
+export class PixelSlash implements Effect {
+  x: number; y: number; angle: number; progress = 0; duration = 200; radius: number;
+  type: 1 | -1 | 0;
+  constructor(x: number, y: number, angle: number, radius: number, type: 1 | -1 | 0) {
+    this.x = x; this.y = y; this.angle = angle; this.radius = radius; this.type = type;
+    if (type === 0) this.duration = 300;
+  }
+  update(dt: number) { this.progress += dt / this.duration; return this.progress >= 1; }
+  draw(ctx: CanvasRenderingContext2D) {
+    if (this.progress >= 1) return;
+    const alpha = 1 - this.progress;
+    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+    ctx.fillStyle = `rgba(56, 189, 248, ${alpha})`;
+    ctx.shadowBlur = 10; ctx.shadowColor = '#0ea5e9';
+    const numBlocks = this.type === 0 ? 32 : 12;
+    const startAngle = this.type === 0 ? 0 : (this.type === 1 ? -Math.PI * 0.6 : Math.PI * 0.6);
+    const endAngle = this.type === 0 ? Math.PI * 2 : (this.type === 1 ? Math.PI * 0.6 : -Math.PI * 0.6);
+    for (let i = 0; i <= this.progress * numBlocks; i++) {
+      const p = i / numBlocks;
+      const a = startAngle + (endAngle - startAngle) * p;
+      const dist = this.type === 0 ? this.radius : this.radius * (0.8 + 0.2 * Math.sin(p * Math.PI));
+      const px = Math.cos(a) * dist; const py = Math.sin(a) * dist;
+      const size = 16 * (1 - this.progress * 0.3);
+      ctx.fillRect(px - size/2, py - size/2, size, size);
+      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      ctx.fillRect(px - size/4, py - size/4, size/2, size/2);
+      ctx.fillStyle = `rgba(56, 189, 248, ${alpha})`;
+    }
+    ctx.restore();
+  }
+}
+
+export class AuraParticle implements Effect {
+  x: number; y: number; progress = 0; duration: number;
+  vx: number; vy: number; size: number;
+  constructor(x: number, y: number, intensity: number) {
+    this.x = x + (Math.random() - 0.5) * 30;
+    this.y = y + (Math.random() - 0.5) * 30;
+    this.vx = (Math.random() - 0.5) * 20;
+    this.vy = -30 - Math.random() * 50;
+    this.duration = 400 + Math.random() * 300;
+    this.size = 4 + (intensity * 2) + Math.random() * 4;
+  }
+  update(dt: number) { 
+    this.progress += dt / this.duration; 
+    this.x += this.vx * (dt / 1000); this.y += this.vy * (dt / 1000);
+    return this.progress >= 1; 
+  }
+  draw(ctx: CanvasRenderingContext2D) {
+    if (this.progress >= 1) return;
+    const alpha = 1 - this.progress;
+    ctx.fillStyle = `rgba(249, 115, 22, ${alpha})`; 
+    ctx.shadowBlur = 10; ctx.shadowColor = '#ea580c';
+    ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
+    ctx.shadowBlur = 0;
+  }
+}
+
+export class ArcaneBlast implements Effect {
+  x: number; y: number; progress = 0; duration = 600;
+  constructor(x: number, y: number) { this.x = x; this.y = y; }
+  update(dt: number) { this.progress += dt / this.duration; return this.progress >= 1; }
+  draw(ctx: CanvasRenderingContext2D) {
+    if (this.progress >= 1) return;
+    ctx.save(); ctx.translate(this.x, this.y);
+    const alpha = 1 - this.progress;
+    const p = this.progress;
+    
+    ctx.fillStyle = `rgba(15, 23, 42, ${1 - Math.pow(p, 4)})`;
+    ctx.beginPath(); ctx.arc(0, 0, 80, 0, Math.PI * 2); ctx.fill();
+    
+    ctx.rotate(p * Math.PI);
+    const size = 150 * Math.sin(p * Math.PI);
+    ctx.strokeStyle = `rgba(168, 85, 247, ${alpha})`; 
+    ctx.lineWidth = 8 * alpha;
+    ctx.strokeRect(-size/2, -size/2, size, size);
+    
+    ctx.rotate(-p * Math.PI * 1.5);
+    const size2 = 120 * Math.sin(p * Math.PI);
+    ctx.strokeStyle = `rgba(217, 70, 239, ${alpha})`; 
+    ctx.lineWidth = 4 * alpha;
+    ctx.strokeRect(-size2/2, -size2/2, size2, size2);
+    
+    ctx.restore();
+  }
 }

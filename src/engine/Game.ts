@@ -143,6 +143,10 @@ export class Game {
     this.projectiles.push(projectile);
   }
 
+  addEffect = (effect: Effect) => {
+    this.effects.push(effect);
+  }
+
   handleEnemyShoot = (x: number, y: number, tx: number, ty: number) => {
     this.enemyProjectiles.push(new EnemyProjectile(x, y, tx, ty));
   }
@@ -210,7 +214,7 @@ export class Game {
       this.spawnWave();
     }
 
-    this.player.update(dt, this.enemies, this.keys, this.handleHit, this.handleShoot);
+    this.player.update(dt, this.enemies, this.keys, this.handleHit, this.handleShoot, this.addEffect);
 
     this.enemies.forEach(e => {
       e.update(dt, this.player.x, this.player.y, this.enemies, this.handleEnemyShoot);
@@ -229,7 +233,7 @@ export class Game {
       this.spawnRandomEnemy();
     }
 
-    this.projectiles.forEach(p => p.update(dt, this.handleHit));
+    this.projectiles.forEach(p => p.update(dt, this.enemies, this.handleHit));
     this.projectiles = this.projectiles.filter(p => !p.dead);
 
     this.enemyProjectiles.forEach(p => p.update(dt, this.player.x, this.player.y, this.damagePlayer));
