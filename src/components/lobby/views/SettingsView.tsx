@@ -1,6 +1,6 @@
 export function SettingsView({ targetFps, onSetFps }: { targetFps: number, onSetFps: (fps: number) => void }) {
   return (
-    <div className="view-settings fade-in">
+    <div className="view-settings view-fade-in">
       <h2>Game Settings</h2>
       <div className="settings-grid">
         <div className="settings-panel">

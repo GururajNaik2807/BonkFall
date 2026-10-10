@@ -16,6 +16,7 @@ export interface HeroDefinition {
     range: string;
   };
   startingPerk: string;
+  locked?: boolean;
 }
 
 export const HEROES: Record<string, HeroDefinition> = {

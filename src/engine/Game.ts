@@ -110,7 +110,8 @@ export class Game {
     this.hitStopTimer = 0;
 
     this.lastTime = performance.now();
-    this.loop(this.lastTime);
+    cancelAnimationFrame(this.animationId); // Fix the massive lag issue by killing any duplicate loop!
+    this.animationId = requestAnimationFrame(this.loop);
   }
 
   triggerHitStop = (duration: number) => {

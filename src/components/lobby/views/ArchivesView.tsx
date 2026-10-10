@@ -1,6 +1,6 @@
 export function ArchivesView() {
   return (
-    <div className="view-archives fade-in">
+    <div className="view-archives view-fade-in">
       <h2>Archives & Records</h2>
       <div className="archives-placeholder">
         <div className="stats-box">

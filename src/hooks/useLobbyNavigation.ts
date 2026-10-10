@@ -7,7 +7,7 @@ export function useLobbyNavigation() {
   const [activeTab, setActiveTab] = useState<LobbyTab>('play');
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>('warrior');
   const [audioEnabled, setAudioEnabled] = useState(true);
-  const [targetFps, setTargetFps] = useState<60 | 144>(144);
+  const [targetFps, setTargetFps] = useState<number>(144);
 
   useEffect(() => {
     audioManager.setMuted(!audioEnabled);
