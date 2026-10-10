@@ -5,6 +5,7 @@ import { DeathSlash, HitImpact, ScreenShake, FloatingText, BloodSplatter, SparkP
 import { EnemyProjectile, MagicMissile } from "../entities/Projectiles";
 import { UPGRADES, type Upgrade } from "../data/upgrades";
 import { AbilitiesManager } from "../entities/Abilities";
+import { Overlay } from "./Overlay";
 import type { EnemyType } from "../entities/Enemy";
 import type { Snapshot, Result } from "../types";
 
@@ -44,6 +45,7 @@ export class Game {
   waveTimer = 0;
   
   hitStopTimer: number = 0;
+  overlay: Overlay;
 
   constructor(host: HTMLDivElement, setS: any, setR: any) {
     this.canvas = document.createElement("canvas");
@@ -58,6 +60,7 @@ export class Game {
     window.addEventListener("resize", () => this.resize());
     
     this.abilities = new AbilitiesManager(this);
+    this.overlay = new Overlay(this);
   }
 
   resize() {
@@ -67,6 +70,7 @@ export class Game {
   }
 
   start(characterType: string) {
+    this.overlay.show();
     if (characterType === 'mage') this.player = new Mage();
     else this.player = new Warrior();
 
@@ -201,6 +205,7 @@ export class Game {
     
     const dt = time - this.lastTime;
     this.lastTime = time;
+    this.overlay.update(time);
 
     if (this.isPaused || this.isGameOver || this.isLevelingUp) {
       this.draw(); // keep drawing
@@ -272,6 +277,7 @@ export class Game {
     // Check Death
     if (this.player.hp <= 0 && !this.isGameOver) {
       this.isGameOver = true;
+      this.overlay.hide();
       this.setR({
         won: false,
         time: this.gameTime,
@@ -392,5 +398,6 @@ export class Game {
   destroy() {
     cancelAnimationFrame(this.animationId);
     this.canvas.remove();
+    this.overlay.destroy();
   }
 }

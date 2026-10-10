@@ -45,6 +45,7 @@ export default function App() {
     setR(null);
     setStarted(false);
     setSelectedHero(null);
+    game.current?.overlay.hide();
     openCharacterSelect();
   };
 
@@ -147,16 +148,6 @@ function HUD({ s, game }: { s: Snapshot; game: Game | null }) {
           <div>⚔ POWER {s.powerLevel}</div>
           <button onClick={() => game?.pause()}>Ⅱ</button>
         </div>
-      </div>
-      <div className="map">
-        <div className="maptitle">WORLD MAP</div>
-        <div className="mapworld">
-          <i style={{ transform: `translate(-50%, -50%) rotate(${s.playerAngle || 0}rad)` }} />
-          <b />
-          {/* Simulated Elite Ping */}
-          {s.wave > 1 && <div className="ping" />}
-        </div>
-        <small>Verdant Expanse</small>
       </div>
       {s.paused && (
         <div className="paused">

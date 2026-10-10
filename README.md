@@ -21,29 +21,35 @@ The project is intentionally engineered from the ground up to remain **lightweig
 The codebase is highly modular, split between the high-frequency game loop and static React overlays:
 
 - **`src/engine/Game.ts`**: The core orchestrator. Manages the `requestAnimationFrame` loop, camera zoom tracking, entity updates, wave spawning, and collision logic. It communicates back to React solely through a `Snapshot` interface.
+- **`src/engine/AudioManager.ts`**: A robust, layered polyphonic audio engine built on the Web Audio API. It supports external `.mp3` loading while featuring high-fidelity, procedurally generated synthesis fallbacks for weapon strikes and vocal exertions. It implements pitch-jitter, shuffle-bags (anti-repetition), and probabilistic cadence throttling.
+- **`src/engine/Overlay.ts`**: A zero-garbage-collection overlay manager. It handles a completely decoupled, hardware-accelerated Minimap and a throttled FPS indicator to keep DOM repaints to a minimum. 
 - **`src/entities/`**: Contains autonomous game actors:
-  - `Warrior.ts` & `Mage.ts`: The heroes, featuring unique movement and attack state machines.
+  - `Warrior.ts` & `Mage.ts`: The heroes, featuring unique movement, fluid combat (no root-lock), and combo state machines.
   - `Enemy.ts`: The terrifying swarm logic. Includes boids-like separation forces, knockback velocity physics, and procedural horror rendering.
-  - `Projectiles.ts`: Manages Magic Missiles and targeted Enemy Projectiles.
-- **`src/effects/`**: The "Game Juice" layer (`HitImpact`, `BloodSplatter`, `ScreenShake`, `FloatingText`). Completely decoupled and managed globally to keep entity files clean.
-- **`src/App.tsx` & `src/styles.css`**: The React DOM overlay. Handles character selection, the dark-fantasy HUD, pause screens (with deep blur layers), and the final run results. React re-renders are kept strictly isolated from the 60hz game canvas.
+  - `Abilities.ts`: A modular active-ability system supporting Orbiting Orbs, Chain Lightning, and Fire Auras.
+- **`src/effects/`**: The "Game Juice" layer (`KineticSlash`, `SparkParticle`, `HitImpact`, `BloodSplatter`, `ScreenShake`, Hit-Stops). Completely decoupled and managed globally.
+- **`src/data/upgrades.ts`**: A scalable roguelite progression registry defining stat boosts and active powerups.
+- **`src/App.tsx` & `src/styles.css`**: The React DOM overlay. Handles character selection, the HUD, pause screens, and the level-up drafting modals.
 
 ---
 
-## 🦑 Procedural Horror & Enemy Design
+## 🦑 Procedural Horror & Combat Juice
 
-The enemies in Bonkfall V2 have been meticulously designed to look dynamic and terrifying without relying on heavy or rigid sprite sheets:
+The enemies and combat mechanics in Bonkfall V2 have been meticulously designed to feel terrifying and incredibly punchy:
 
-* **Procedural Wriggling:** Enemies are drawn dynamically on the canvas using vertex jitter driven by sine waves (`performance.now()`), creating a sickening, writhing appearance.
-* **Orientation & Glare:** The monsters track their movement angle and accurately rotate their bodies to face the player. Piercing red/amber slit eyes dynamically glare forward.
+* **Procedural Wriggling:** Enemies are drawn dynamically using vertex jitter driven by sine waves (`performance.now()`), creating a sickening, writhing appearance with piercing slit eyes tracking the player.
 * **Distinct Archetypes:** 
   * *Swarmers:* Fast, spiky arachnid-like creatures with rapidly twitching legs.
-  * *Brutes:* High-mass, asymmetric jagged squares with multiple chaotic pinpoint eyes.
-  * *Stalkers:* Floating parasite eyeballs with undulating tail tendrils trailing their movement vector.
-* **Combat Juice:** 
-  * Heavy hits trigger dynamic screen shakes and spawn bright red floating damage numbers.
+  * *Brutes:* High-mass, asymmetric jagged squares.
+  * *Ranged/Elites:* Purple elites and ranged stalkers that fire targeted projectiles.
+* **Massive Combat Feel (Juice):** 
+  * Heavy melee strikes trigger **Hit-Stop** (micro frame-freezes), dynamic screen shakes, and sharp `KineticSlash` pixel-art trails.
+  * Hitting an enemy applies directional knockback, preventing unfair stacking.
   * Taking damage causes enemies to briefly flash pure white and physically deform using a **Squash and Stretch** scaling tween.
-  * Dying enemies don't just vanish—they explode into decaying `BloodSplatter` particles that retain their physical momentum.
+  * Dying enemies explode into decaying `BloodSplatter` particles that retain their physical momentum.
+* **Dynamic Audio Layers:** 
+  * Every attack fires two synchronized audio layers: an FX layer (sword slash/spell whoosh) and an Exertion layer (vocal grunt/chant).
+  * Audio pools use a Shuffle Bag and heavy pitch modulation (±8%) to prevent player fatigue, ensuring no two attacks sound perfectly alike.
 
 ---
 
