@@ -47,6 +47,9 @@ export class Game {
   hitStopTimer: number = 0;
   overlay: Overlay;
 
+  targetFps: number = 144;
+  lastFrameTime: number = 0;
+
   constructor(host: HTMLDivElement, setS: any, setR: any) {
     this.canvas = document.createElement("canvas");
     this.ctx = this.canvas.getContext("2d")!;
@@ -203,6 +206,12 @@ export class Game {
   loop = (time: number) => {
     this.animationId = requestAnimationFrame(this.loop);
     
+    if (this.targetFps < 144) {
+      const msPerFrame = 1000 / this.targetFps;
+      if (time - this.lastFrameTime < msPerFrame) return;
+    }
+    this.lastFrameTime = time;
+
     const dt = time - this.lastTime;
     this.lastTime = time;
     this.overlay.update(time);

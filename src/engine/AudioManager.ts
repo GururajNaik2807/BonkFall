@@ -2,6 +2,7 @@ export class AudioManager {
   private ctx: AudioContext | null = null;
   private buffers: Map<string, AudioBuffer> = new Map();
   private lastVoiceTime: number = 0;
+  private isMuted: boolean = false;
   
   // Audio Pools (4-5 clips per category)
   private warriorVoices = ['warrior_voice_1', 'warrior_voice_2', 'warrior_voice_3', 'warrior_voice_4', 'warrior_voice_5'];
@@ -24,6 +25,10 @@ export class AudioManager {
     };
     window.addEventListener('keydown', initAudio);
     window.addEventListener('click', initAudio);
+  }
+
+  public setMuted(muted: boolean) {
+    this.isMuted = muted;
   }
 
   async init() {
@@ -92,7 +97,7 @@ export class AudioManager {
   }
 
   private playFX(pool: string[], type: 'warrior' | 'mage', tracker: string, isHeavy: boolean) {
-    if (!this.ctx) return;
+    if (!this.ctx || this.isMuted) return;
     
     const idx = this.getRandomIndex(pool.length, tracker);
     const key = pool[idx];
@@ -119,7 +124,7 @@ export class AudioManager {
   }
 
   private playVoice(pool: string[], type: 'warrior' | 'mage', tracker: string, isHeavy: boolean) {
-    if (!this.ctx) return;
+    if (!this.ctx || this.isMuted) return;
     
     const now = this.ctx.currentTime;
     

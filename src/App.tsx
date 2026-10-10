@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Game } from "./engine/Game";
 import type { Snapshot, Result } from "./types";
+import { LobbyLayout } from "./components/lobby/LobbyLayout";
 import "./styles.css";
 
 const fmt = (n: number) => `${Math.floor(n / 60).toString().padStart(2, "0")}:${Math.floor(n % 60).toString().padStart(2, "0")}`;
@@ -11,7 +12,6 @@ export default function App() {
   const [s, setS] = useState<Snapshot | null>(null);
   const [r, setR] = useState<Result | null>(null);
   const [started, setStarted] = useState(false);
-  const [charSelect, setCharSelect] = useState(false);
   const [selectedHero, setSelectedHero] = useState<"warrior" | "mage" | null>(null);
 
   useEffect(() => {
@@ -20,13 +20,8 @@ export default function App() {
     return () => game.current?.destroy();
   }, []);
 
-  const openCharacterSelect = () => {
-    setCharSelect(true);
-  };
-
-  const confirmCharacter = (type: "warrior" | "mage") => {
-    setCharSelect(false);
-    setSelectedHero(type);
+  const confirmCharacter = (type: string) => {
+    setSelectedHero(type as "warrior" | "mage");
     game.current?.start(type);
     setR(null);
     setStarted(true);
@@ -37,7 +32,7 @@ export default function App() {
       game.current?.start(selectedHero);
       setR(null);
     } else {
-      openCharacterSelect();
+      setStarted(false);
     }
   };
 
@@ -46,42 +41,15 @@ export default function App() {
     setStarted(false);
     setSelectedHero(null);
     game.current?.overlay.hide();
-    openCharacterSelect();
   };
 
   return (
     <main className="app">
-      {!started && !charSelect && (
-        <div className="menu">
-          <div className="logo">BONKFALL</div>
-          <p>2D SURVIVAL ADVENTURE</p>
-          <h1>Enter the<br /><em>Verdant Expanse.</em></h1>
-          <button onClick={openCharacterSelect}>START RUN</button>
-          <div className="hint">WASD / ARROWS · Your hero attacks enemies automatically when they enter range.</div>
-        </div>
-      )}
-
-      {!started && charSelect && (
-        <div className="shade" style={{ pointerEvents: 'auto', zIndex: 40 }}>
-          <div className="power">
-            <small>NEW RUN</small>
-            <h2>Choose your Hero</h2>
-            <div className="choices">
-              <button onClick={() => confirmCharacter('warrior')}>
-                <span>⚔️</span>
-                <b>Warrior</b>
-                <i>Melee Combatant</i>
-                <p>Tough close-quarters survivor with sweeping area damage.</p>
-              </button>
-              <button onClick={() => confirmCharacter('mage')}>
-                <span>🔮</span>
-                <b>Mage</b>
-                <i>Ranged Spellcaster</i>
-                <p>Fragile caster that shoots tracking magic missiles.</p>
-              </button>
-            </div>
-          </div>
-        </div>
+      {!started && (
+        <LobbyLayout 
+          onStartGame={confirmCharacter} 
+          onSetFps={(fps) => { if (game.current) game.current.targetFps = fps; }} 
+        />
       )}
 
       {s && started && <HUD s={s} game={game.current} />}
