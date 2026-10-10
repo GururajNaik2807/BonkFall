@@ -1,22 +1,22 @@
-import { CHARACTERS } from '../../../config/characters';
+import { HEROES } from '../../../config/characters';
 
 export function HomePlayView({ selectedHero, onStart, onGoToHeroes }: any) {
-  const char = CHARACTERS.find(c => c.id === selectedHero);
+  const char = HEROES[selectedHero];
   if (!char) return null;
 
   return (
     <div className="view-home">
       <div className="home-stage-container">
-        <div className="home-center-stage">
-          <div className="stage-glow" style={{ background: `radial-gradient(circle, ${char.color}80 0%, transparent 60%)` }} />
-          <div className={`stage-hero hero-${char.id}`} style={{ borderColor: char.color, boxShadow: `0 20px 50px ${char.color}40` }}>
-            <span className="hero-icon">{char.icon}</span>
+        <div className="home-center-stage" key={char.id}>
+          <div className="stage-glow" style={{ background: `radial-gradient(circle, ${char.accentColor}80 0%, transparent 60%)` }} />
+          <div className={`stage-hero hero-${char.id}`} style={{ borderColor: char.accentColor, boxShadow: `0 20px 50px ${char.accentColor}40` }}>
+            <img src={char.asset.src} alt={char.name} className="hero-sprite" />
           </div>
         </div>
         
-        <div className="home-info">
-          <h2 style={{ color: char.color }}>{char.name}</h2>
-          <p>{char.tagline}</p>
+        <div className="home-info" key={`info-${char.id}`}>
+          <h2 style={{ color: char.accentColor }}>{char.name}</h2>
+          <p>{char.title}</p>
           <button className="change-hero-link" onClick={onGoToHeroes}>Change Hero ➔</button>
         </div>
       </div>
