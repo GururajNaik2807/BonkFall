@@ -399,7 +399,7 @@ export class Game {
     this.setS({
       hp: this.player.hp, maxHp: this.player.maxHp, xp: this.xp, nextXp: this.nextXp, level: this.level,
       time: this.gameTime, wave: this.wave, mapName: "Verdant Expanse", kills: this.kills,
-      powerLevel: this.level, paused: this.isPaused || this.isLevelingUp, playerAngle: this.player.targetAngle || 0,
+      powerLevel: this.level, paused: this.isPaused, playerAngle: this.player.targetAngle || 0,
       choices: this.choices
     });
   }

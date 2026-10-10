@@ -52,7 +52,7 @@ export default function App() {
         />
       )}
 
-      {s && started && <HUD s={s} game={game.current} />}
+      {s && started && <HUD s={s} game={game.current} onReturnToMenu={changeHero} />}
 
       {s?.choices && s.choices.length > 0 && (
         <div className="shade">
@@ -94,7 +94,7 @@ export default function App() {
   );
 }
 
-function HUD({ s, game }: { s: Snapshot; game: Game | null }) {
+function HUD({ s, game, onReturnToMenu }: { s: Snapshot; game: Game | null, onReturnToMenu: () => void }) {
   return (
     <>
       <div className="hud">
@@ -112,9 +112,11 @@ function HUD({ s, game }: { s: Snapshot; game: Game | null }) {
           <span>WAVE {s.wave} · {s.mapName}</span>
         </div>
         <div className="right">
-          <div>☠ {s.kills}</div>
+          <div>💀 {s.kills}</div>
           <div>⚔ POWER {s.powerLevel}</div>
-          <button onClick={() => game?.pause()}>Ⅱ</button>
+          <button onClick={() => game?.pause()} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', fontWeight: 'bold' }}>
+            <span>⏸</span> PAUSE
+          </button>
         </div>
       </div>
       {s.paused && (
@@ -126,7 +128,13 @@ function HUD({ s, game }: { s: Snapshot; game: Game | null }) {
             <div><span>Power Level</span><b>{s.powerLevel}</b></div>
             <div><span>Current Map</span><b>{s.mapName}</b></div>
           </div>
-          <button onClick={() => game?.pause()}>RESUME</button>
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+            <button onClick={() => game?.pause()}>RESUME</button>
+            <button onClick={() => {
+              game?.pause(); // unpause the loop first
+              onReturnToMenu(); 
+            }}>RETURN TO MENU</button>
+          </div>
         </div>
       )}
     </>

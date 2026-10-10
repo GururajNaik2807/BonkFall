@@ -20,7 +20,8 @@ The project is intentionally engineered from the ground up to remain **lightweig
 
 The codebase is highly modular, split between the high-frequency game loop and static React overlays:
 
-- **`src/engine/Game.ts`**: The core orchestrator. Manages the `requestAnimationFrame` loop, camera zoom tracking, entity updates, wave spawning, and collision logic. It communicates back to React solely through a `Snapshot` interface.
+- **`src/components/lobby/LobbyLayout.tsx`**: An immersive, full-viewport Single Page Application (SPA) dashboard. Features a persistent Navigation Rail to smoothly hot-swap between Home, Hero Select, Settings, and Archives without breaking the game flow.
+- **`src/engine/Game.ts`**: The core orchestrator. Manages the `requestAnimationFrame` loop, camera zoom tracking, entity updates, wave spawning, and collision logic. Features built-in custom Frame Capping (e.g., 60/144 FPS toggles). It communicates back to React solely through a `Snapshot` interface.
 - **`src/engine/AudioManager.ts`**: A robust, layered polyphonic audio engine built on the Web Audio API. It supports external `.mp3` loading while featuring high-fidelity, procedurally generated synthesis fallbacks for weapon strikes and vocal exertions. It implements pitch-jitter, shuffle-bags (anti-repetition), and probabilistic cadence throttling.
 - **`src/engine/Overlay.ts`**: A zero-garbage-collection overlay manager. It handles a completely decoupled, hardware-accelerated Minimap and a throttled FPS indicator to keep DOM repaints to a minimum. 
 - **`src/entities/`**: Contains autonomous game actors:
@@ -29,7 +30,8 @@ The codebase is highly modular, split between the high-frequency game loop and s
   - `Abilities.ts`: A modular active-ability system supporting Orbiting Orbs, Chain Lightning, and Fire Auras.
 - **`src/effects/`**: The "Game Juice" layer (`KineticSlash`, `SparkParticle`, `HitImpact`, `BloodSplatter`, `ScreenShake`, Hit-Stops). Completely decoupled and managed globally.
 - **`src/data/upgrades.ts`**: A scalable roguelite progression registry defining stat boosts and active powerups.
-- **`src/App.tsx` & `src/styles.css`**: The React DOM overlay. Handles character selection, the HUD, pause screens, and the level-up drafting modals.
+- **`src/config/characters.ts`**: A declarative schema for rendering High-Fidelity Pixel Art heroes dynamically into the UI (including their stats, specific UI glow `accentColor`, and dynamic SVG silhouetting).
+- **`src/App.tsx` & `src/styles.css`**: The React DOM overlay. Handles the Lobby Dashboard, HUD, pause screens, and level-up drafting modals.
 
 ---
 
@@ -50,6 +52,7 @@ The enemies and combat mechanics in Bonkfall V2 have been meticulously designed 
 * **Dynamic Audio Layers:** 
   * Every attack fires two synchronized audio layers: an FX layer (sword slash/spell whoosh) and an Exertion layer (vocal grunt/chant).
   * Audio pools use a Shuffle Bag and heavy pitch modulation (±8%) to prevent player fatigue, ensuring no two attacks sound perfectly alike.
+  * Fully integrated global **Mute State** toggled directly from the Dashboard.
 
 ---
 
