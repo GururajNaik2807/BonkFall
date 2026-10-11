@@ -772,168 +772,631 @@ function createWarriorModel(): THREE.Group {
   return group;
 }
 
-// ─── Procedural Mage Mesh ──────────────────────────────────────────
+// ─── Procedural Mage Mesh (Stylized Low-Poly Wizard Overhaul) ──────
 function createMageModel(): THREE.Group {
   const group = new THREE.Group();
 
+  // ── Stylized Material Palette (flatShading: true) ──
   const robeMat = new THREE.MeshStandardMaterial({
-    color: 0x2d1b69,
-    roughness: 0.7,
+    color: 0x3b0764, // Deep royal purple
+    roughness: 0.75,
     metalness: 0.1,
     flatShading: true,
+    side: THREE.DoubleSide,
   });
-  const robeAccentMat = new THREE.MeshStandardMaterial({
-    color: 0x4a2d8a,
-    roughness: 0.6,
-    metalness: 0.2,
-    flatShading: true,
-  });
-  const skinMat = new THREE.MeshStandardMaterial({
-    color: 0xdeb887,
+
+  const innerRobeMat = new THREE.MeshStandardMaterial({
+    color: 0x1e1b4b, // Deep indigo under-robe
     roughness: 0.8,
     metalness: 0.05,
     flatShading: true,
   });
-  const staffMat = new THREE.MeshStandardMaterial({
-    color: 0x654321,
-    roughness: 0.8,
-    metalness: 0.15,
+
+  const goldTrimMat = new THREE.MeshStandardMaterial({
+    color: 0xeab308, // Matte yellow / gold accents & trim
+    roughness: 0.35,
+    metalness: 0.7,
     flatShading: true,
   });
+
+  const capeMat = new THREE.MeshStandardMaterial({
+    color: 0x581c87, // Deep violet-crimson tattered cape
+    roughness: 0.85,
+    metalness: 0.05,
+    flatShading: true,
+    side: THREE.DoubleSide,
+  });
+
+
+  const woodStaffMat = new THREE.MeshStandardMaterial({
+    color: 0x451a03, // Earthy dark brown gnarled wooden staff
+    roughness: 0.85,
+    metalness: 0.1,
+    flatShading: true,
+  });
+
+  const staffCageMat = new THREE.MeshStandardMaterial({
+    color: 0xd97706, // Golden cage / claw holding the jewel
+    roughness: 0.3,
+    metalness: 0.75,
+    flatShading: true,
+  });
+
+  const beardWhiteMat = new THREE.MeshStandardMaterial({
+    color: 0xf1f5f9, // Clean white beard & hair
+    roughness: 0.85,
+    metalness: 0.02,
+    flatShading: true,
+  });
+
+  const beardGrayMat = new THREE.MeshStandardMaterial({
+    color: 0xe2e8f0, // Soft gray contrast layer for beard
+    roughness: 0.85,
+    metalness: 0.02,
+    flatShading: true,
+  });
+
+  const skinMat = new THREE.MeshStandardMaterial({
+    color: 0xfdba74, // Stylized tan/skin tone for nose and face
+    roughness: 0.75,
+    metalness: 0.05,
+    flatShading: true,
+  });
+
+  const eyeMat = new THREE.MeshBasicMaterial({
+    color: 0x00f2ff, // Intensely emissive cyan (MeshBasicMaterial for vibrant glow in shadows)
+  });
+
   const crystalMat = new THREE.MeshStandardMaterial({
-    color: 0x818cf8,
-    emissive: 0x818cf8,
-    emissiveIntensity: 0.8,
+    color: 0xc084fc, // Translucent glowing crystal jewel
+    emissive: 0xa855f7,
+    emissiveIntensity: 1.4,
+    roughness: 0.1,
+    metalness: 0.4,
+    transparent: true,
+    opacity: 0.9,
+    flatShading: true,
+  });
+
+  const spellOrbMat = new THREE.MeshStandardMaterial({
+    color: 0x22d3ee, // Glowing cyan spell core
+    emissive: 0x06b6d4,
+    emissiveIntensity: 2.2,
     roughness: 0.1,
     metalness: 0.3,
     transparent: true,
     opacity: 0.9,
     flatShading: true,
   });
-  const eyeMat = new THREE.MeshStandardMaterial({
-    color: 0xaabbff,
-    emissive: 0x8888ff,
-    emissiveIntensity: 0.5,
-    roughness: 0.3,
-    metalness: 0.1,
+
+  const spellRingMat = new THREE.MeshStandardMaterial({
+    color: 0xd946ef, // Magenta orbital energy ring
+    emissive: 0xc026d3,
+    emissiveIntensity: 1.8,
+    roughness: 0.2,
+    metalness: 0.2,
+    transparent: true,
+    opacity: 0.85,
     flatShading: true,
   });
 
-  // Robe body (flowing, wider at bottom)
-  const robeGeo = new THREE.CylinderGeometry(0.22, 0.44, 1.0, 8);
-  const robe = new THREE.Mesh(robeGeo, robeMat);
-  robe.position.set(0, 0.5, 0);
-  group.add(robe);
+  // ── 1. Robes & Anatomy ──
+  // Inner Robe Core (dark indigo cylinder base)
+  const innerRobeGeo = new THREE.CylinderGeometry(0.24, 0.40, 0.74, 8);
+  const innerRobe = new THREE.Mesh(innerRobeGeo, innerRobeMat);
+  innerRobe.position.set(0, 0.35, 0);
+  group.add(innerRobe);
 
-  // Robe trim / belt sash
-  const sashGeo = new THREE.TorusGeometry(0.28, 0.03, 6, 12);
-  const sash = new THREE.Mesh(
-    sashGeo,
-    new THREE.MeshStandardMaterial({ color: 0xc8a84e, roughness: 0.5, metalness: 0.6, flatShading: true })
-  );
-  sash.position.set(0, 0.75, 0);
-  sash.rotation.x = Math.PI / 2;
-  group.add(sash);
+  // Outer Robe / Tiered Split Skirt (deep royal purple with gold borders)
+  // Left skirt panel
+  const skirtLeftGeo = new THREE.BoxGeometry(0.24, 0.72, 0.36);
+  const skirtLeft = new THREE.Mesh(skirtLeftGeo, robeMat);
+  skirtLeft.position.set(-0.16, 0.34, 0);
+  skirtLeft.rotation.z = -0.06;
+  group.add(skirtLeft);
 
-  // Head
-  const headGeo = new THREE.SphereGeometry(0.2, 8, 8);
+  const skirtLeftTrim = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.72, 0.04), goldTrimMat);
+  skirtLeftTrim.position.set(-0.04, 0.34, 0.18);
+  group.add(skirtLeftTrim);
+
+  // Right skirt panel
+  const skirtRightGeo = new THREE.BoxGeometry(0.24, 0.72, 0.36);
+  const skirtRight = new THREE.Mesh(skirtRightGeo, robeMat);
+  skirtRight.position.set(0.16, 0.34, 0);
+  skirtRight.rotation.z = 0.06;
+  group.add(skirtRight);
+
+  const skirtRightTrim = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.72, 0.04), goldTrimMat);
+  skirtRightTrim.position.set(0.04, 0.34, 0.18);
+  group.add(skirtRightTrim);
+
+  // Lower skirt hem gold border
+  const hemTrimLeft = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.04, 0.38), goldTrimMat);
+  hemTrimLeft.position.set(-0.16, 0.0, 0);
+  group.add(hemTrimLeft);
+
+  const hemTrimRight = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.04, 0.38), goldTrimMat);
+  hemTrimRight.position.set(0.16, 0.0, 0);
+  group.add(hemTrimRight);
+
+  // Torso / Chest (tapered upper robe)
+  const chestGeo = new THREE.CylinderGeometry(0.32, 0.27, 0.38, 8);
+  const chest = new THREE.Mesh(chestGeo, robeMat);
+  chest.position.set(0, 0.90, 0);
+  group.add(chest);
+
+  // Chest vertical gold piping
+  const chestTrimLeft = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.36, 0.03), goldTrimMat);
+  chestTrimLeft.position.set(-0.06, 0.90, 0.27);
+  group.add(chestTrimLeft);
+
+  const chestTrimRight = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.36, 0.03), goldTrimMat);
+  chestTrimRight.position.set(0.06, 0.90, 0.27);
+  group.add(chestTrimRight);
+
+  // High standing collar behind the neck
+  const collarGeo = new THREE.BoxGeometry(0.40, 0.18, 0.24);
+  const collar = new THREE.Mesh(collarGeo, robeMat);
+  collar.position.set(0, 1.20, -0.06);
+  collar.rotation.x = -0.15;
+  group.add(collar);
+
+  const collarTrim = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.035, 0.04), goldTrimMat);
+  collarTrim.position.set(0, 1.30, -0.04);
+  group.add(collarTrim);
+
+  // Layered Shoulder Drapes / Mantle (epaulets with gold trim)
+  const mantleLeftGeo = new THREE.BoxGeometry(0.24, 0.12, 0.26);
+  const mantleLeft = new THREE.Mesh(mantleLeftGeo, robeMat);
+  mantleLeft.position.set(-0.36, 1.10, 0.02);
+  mantleLeft.rotation.z = 0.25;
+  group.add(mantleLeft);
+
+  const mantleLeftTrim = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.03, 0.27), goldTrimMat);
+  mantleLeftTrim.position.set(-0.36, 1.05, 0.02);
+  mantleLeftTrim.rotation.z = 0.25;
+  group.add(mantleLeftTrim);
+
+  const mantleRightGeo = new THREE.BoxGeometry(0.24, 0.12, 0.26);
+  const mantleRight = new THREE.Mesh(mantleRightGeo, robeMat);
+  mantleRight.position.set(0.36, 1.10, 0.02);
+  mantleRight.rotation.z = -0.25;
+  group.add(mantleRight);
+
+  const mantleRightTrim = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.03, 0.27), goldTrimMat);
+  mantleRightTrim.position.set(0.36, 1.05, 0.02);
+  mantleRightTrim.rotation.z = -0.25;
+  group.add(mantleRightTrim);
+
+  // Waist Belt & Buckle
+  const beltGeo = new THREE.CylinderGeometry(0.29, 0.29, 0.10, 10);
+  const belt = new THREE.Mesh(beltGeo, goldTrimMat);
+  belt.position.set(0, 0.71, 0);
+  group.add(belt);
+
+  const beltInner = new THREE.Mesh(new THREE.CylinderGeometry(0.292, 0.292, 0.04, 10), innerRobeMat);
+  beltInner.position.set(0, 0.71, 0);
+  group.add(beltInner);
+
+  // Diagonal Hip Drapes / Trim (as in reference art)
+  const hipTrimLeft = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.035, 0.03), goldTrimMat);
+  hipTrimLeft.position.set(-0.16, 0.64, 0.22);
+  hipTrimLeft.rotation.z = -0.45;
+  group.add(hipTrimLeft);
+
+  const hipTrimRight = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.035, 0.03), goldTrimMat);
+  hipTrimRight.position.set(0.16, 0.64, 0.22);
+  hipTrimRight.rotation.z = 0.45;
+  group.add(hipTrimRight);
+
+  // Geometric Gold Buckle
+  const buckleGeo = new THREE.BoxGeometry(0.12, 0.11, 0.06);
+  const buckle = new THREE.Mesh(buckleGeo, goldTrimMat);
+  buckle.position.set(0, 0.71, 0.28);
+  group.add(buckle);
+
+  const buckleCore = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.06, 0.065), innerRobeMat);
+  buckleCore.position.set(0, 0.71, 0.285);
+  group.add(buckleCore);
+
+  // Tattered Fabric Cape (hanging behind in deep violet-crimson)
+  const capeGroup = new THREE.Group();
+  const capeCenterGeo = new THREE.BoxGeometry(0.34, 1.02, 0.025);
+  const capeCenter = new THREE.Mesh(capeCenterGeo, capeMat);
+  capeCenter.position.set(0, 0.60, -0.20);
+  capeCenter.rotation.x = -0.12;
+  capeGroup.add(capeCenter);
+
+  const capeLeftGeo = new THREE.BoxGeometry(0.24, 0.98, 0.025);
+  const capeLeft = new THREE.Mesh(capeLeftGeo, capeMat);
+  capeLeft.position.set(-0.20, 0.60, -0.18);
+  capeLeft.rotation.x = -0.11;
+  capeLeft.rotation.y = 0.15;
+  capeLeft.rotation.z = 0.08;
+  capeGroup.add(capeLeft);
+
+  const capeRightGeo = new THREE.BoxGeometry(0.24, 0.98, 0.025);
+  const capeRight = new THREE.Mesh(capeRightGeo, capeMat);
+  capeRight.position.set(0.20, 0.60, -0.18);
+  capeRight.rotation.x = -0.11;
+  capeRight.rotation.y = -0.15;
+  capeRight.rotation.z = -0.08;
+  capeGroup.add(capeRight);
+  group.add(capeGroup);
+
+  // Dark Wizard Shoes (peeking out from under skirt hem)
+  const shoeGeo = new THREE.BoxGeometry(0.12, 0.07, 0.20);
+  const leftShoe = new THREE.Mesh(shoeGeo, innerRobeMat);
+  leftShoe.position.set(-0.13, -0.07, 0.06);
+  group.add(leftShoe);
+
+  const rightShoe = new THREE.Mesh(shoeGeo, innerRobeMat);
+  rightShoe.position.set(0.13, -0.07, 0.04);
+  group.add(rightShoe);
+
+  // ── 2. Head, Visible Face, Cascading White Beard & Wrinkled Wizard Hat ──
+  // Head core (face)
+  const headGeo = new THREE.SphereGeometry(0.18, 8, 8);
   const head = new THREE.Mesh(headGeo, skinMat);
-  head.position.set(0, 1.28, 0);
+  head.position.set(0, 1.32, 0.04);
   group.add(head);
 
-  // Wizard hat (cone + brim)
-  const hatGeo = new THREE.ConeGeometry(0.2, 0.48, 8);
-  const hat = new THREE.Mesh(hatGeo, robeMat);
-  hat.position.set(0, 1.68, 0);
-  hat.rotation.z = 0.1;
-  group.add(hat);
+  // Defined Brow Ridge (tan/skin tone right under hat brim shadow)
+  const browRidgeGeo = new THREE.BoxGeometry(0.24, 0.045, 0.10);
+  const browRidge = new THREE.Mesh(browRidgeGeo, skinMat);
+  browRidge.position.set(0, 1.36, 0.17);
+  browRidge.rotation.x = -0.06;
+  group.add(browRidge);
 
-  const brimGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.03, 12);
-  const brim = new THREE.Mesh(brimGeo, robeAccentMat);
-  brim.position.set(0, 1.42, 0);
-  group.add(brim);
+  // Prominent Stylized Low-Poly Nose
+  const noseGeo = new THREE.BoxGeometry(0.055, 0.09, 0.08);
+  const nose = new THREE.Mesh(noseGeo, skinMat);
+  nose.position.set(0, 1.285, 0.22);
+  nose.rotation.x = 0.20; // jutting forward characterfully
+  group.add(nose);
 
-  // Glowing eyes
-  const eyeGeo = new THREE.SphereGeometry(0.035, 6, 6);
-  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-  leftEye.position.set(-0.07, 1.3, 0.17);
+  // HIGHLY VISIBLE EYES: Intensely emissive cyan shapes (MeshBasicMaterial)
+  const eyeLeftGeo = new THREE.BoxGeometry(0.052, 0.028, 0.035);
+  const leftEye = new THREE.Mesh(eyeLeftGeo, eyeMat);
+  leftEye.position.set(-0.068, 1.335, 0.20);
+  leftEye.rotation.z = -0.15;
   group.add(leftEye);
-  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-  rightEye.position.set(0.07, 1.3, 0.17);
+
+  const eyeRightGeo = new THREE.BoxGeometry(0.052, 0.028, 0.035);
+  const rightEye = new THREE.Mesh(eyeRightGeo, eyeMat);
+  rightEye.position.set(0.068, 1.335, 0.20);
+  rightEye.rotation.z = 0.15;
   group.add(rightEye);
 
-  // Arms (covered by sleeves)
-  const sleeveGeo = new THREE.CylinderGeometry(0.06, 0.1, 0.4, 6);
+  // Eye glow point light
+  const eyeLight = new THREE.PointLight(0x00f2ff, 0.8, 1.2);
+  eyeLight.position.set(0, 1.335, 0.25);
+  group.add(eyeLight);
 
-  const leftSleeve = new THREE.Mesh(sleeveGeo, robeMat);
-  leftSleeve.position.set(-0.32, 0.85, 0);
-  leftSleeve.rotation.z = 0.5;
+  // Layered, Cascading Low-Poly Beard and Mustache (white & gray)
+  // Outward-Flaring Mustache Wings
+  const mustacheLeft = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.055, 0.08), beardWhiteMat);
+  mustacheLeft.position.set(-0.085, 1.23, 0.23);
+  mustacheLeft.rotation.z = -0.32;
+  mustacheLeft.rotation.y = -0.22;
+  group.add(mustacheLeft);
+
+  const mustacheRight = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.055, 0.08), beardWhiteMat);
+  mustacheRight.position.set(0.085, 1.23, 0.23);
+  mustacheRight.rotation.z = 0.32;
+  mustacheRight.rotation.y = 0.22;
+  group.add(mustacheRight);
+
+  // Prominent Cascading Beard descending over the chest in multi-segmented layers
+  // Layer 1 (Upper chin / jaw fullness)
+  const beardLayer1 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.14), beardWhiteMat);
+  beardLayer1.position.set(0, 1.15, 0.24);
+  group.add(beardLayer1);
+
+  // Layer 2 (Mid cascading fold with gray contrast)
+  const beardLayer2 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.17, 0.13), beardGrayMat);
+  beardLayer2.position.set(0, 1.00, 0.26);
+  group.add(beardLayer2);
+
+  // Layer 3 (Lower cascading fold)
+  const beardLayer3 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.17, 0.11), beardWhiteMat);
+  beardLayer3.position.set(0, 0.86, 0.27);
+  group.add(beardLayer3);
+
+  // Layer 4 (Faceted pointed tip tapering over belt)
+  const beardTipGeo = new THREE.ConeGeometry(0.08, 0.28, 5);
+  const beardTip = new THREE.Mesh(beardTipGeo, beardWhiteMat);
+  beardTip.position.set(0, 0.70, 0.26);
+  beardTip.rotation.x = Math.PI - 0.12; // curve slightly forward
+  group.add(beardTip);
+
+  // Side beard tufts (enhances 3/4 view silhouette)
+  const tuftLeft1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.08), beardGrayMat);
+  tuftLeft1.position.set(-0.13, 1.10, 0.22);
+  tuftLeft1.rotation.z = -0.20;
+  group.add(tuftLeft1);
+
+  const tuftRight1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.08), beardGrayMat);
+  tuftRight1.position.set(0.13, 1.10, 0.22);
+  tuftRight1.rotation.z = 0.20;
+  group.add(tuftRight1);
+
+  const tuftLeft2 = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.07), beardWhiteMat);
+  tuftLeft2.position.set(-0.10, 0.95, 0.24);
+  tuftLeft2.rotation.z = -0.15;
+  group.add(tuftLeft2);
+
+  const tuftRight2 = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.07), beardWhiteMat);
+  tuftRight2.position.set(0.10, 0.95, 0.24);
+  tuftRight2.rotation.z = 0.15;
+  group.add(tuftRight2);
+
+  // Hair locks framing sides of head
+  const hairLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.24, 0.14), beardWhiteMat);
+  hairLeft.position.set(-0.17, 1.25, 0.06);
+  hairLeft.rotation.z = -0.12;
+  group.add(hairLeft);
+
+  const hairRight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.24, 0.14), beardWhiteMat);
+  hairRight.position.set(0.17, 1.25, 0.06);
+  hairRight.rotation.z = 0.12;
+  group.add(hairRight);
+
+  // ── Dynamic Wrinkled Wizard's Hat with S-Curve & Wavy Brim ──
+  const hatGroup = new THREE.Group();
+  hatGroup.position.set(0, 1.44, 0.02);
+  hatGroup.rotation.x = -0.06; // tilt back slightly so face & eyes are fully revealed
+  hatGroup.rotation.z = -0.05;
+
+  // Wavy Brim with side dips and arched front
+  const brimCenterGeo = new THREE.CylinderGeometry(0.44, 0.46, 0.035, 14);
+  const brimCenter = new THREE.Mesh(brimCenterGeo, robeMat);
+  hatGroup.add(brimCenter);
+
+  // Left brim dip
+  const brimLeftDip = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.032, 0.44), robeMat);
+  brimLeftDip.position.set(-0.25, -0.035, 0);
+  brimLeftDip.rotation.z = -0.15;
+  hatGroup.add(brimLeftDip);
+
+  // Right brim dip
+  const brimRightDip = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.032, 0.44), robeMat);
+  brimRightDip.position.set(0.25, -0.035, 0);
+  brimRightDip.rotation.z = 0.15;
+  hatGroup.add(brimRightDip);
+
+  // Front brim upward arch (lifts up over the brow ridge)
+  const brimFrontArch = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.032, 0.18), robeMat);
+  brimFrontArch.position.set(0, 0.02, 0.22);
+  brimFrontArch.rotation.x = -0.18;
+  hatGroup.add(brimFrontArch);
+
+  // Thick Gold Band/Strap just above brim (0xeab308)
+  const hatBandGeo = new THREE.CylinderGeometry(0.25, 0.28, 0.085, 12);
+  const hatBand = new THREE.Mesh(hatBandGeo, goldTrimMat);
+  hatBand.position.set(0, 0.06, 0);
+  hatGroup.add(hatBand);
+
+  const hatBandInner = new THREE.Mesh(new THREE.CylinderGeometry(0.255, 0.282, 0.04, 12), innerRobeMat);
+  hatBandInner.position.set(0, 0.06, 0);
+  hatGroup.add(hatBandInner);
+
+  // 3D Geometric Gold Buckle / Brooch (0xd97706)
+  const hatBuckle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.10, 0.05), staffCageMat);
+  hatBuckle.position.set(0, 0.06, 0.28);
+  hatGroup.add(hatBuckle);
+
+  const hatBuckleInner = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.065, 0.055), goldTrimMat);
+  hatBuckleInner.position.set(0, 0.06, 0.285);
+  hatGroup.add(hatBuckleInner);
+
+  // Segmented Cone with 'S'-Curve, Sag, and Wrinkles
+  // Segment 1 (lower cone base)
+  const hatCone1 = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.25, 0.22, 8), robeMat);
+  hatCone1.position.set(0, 0.19, 0);
+  hatGroup.add(hatCone1);
+
+  // Crease wrinkle 1
+  const wrinkle1 = new THREE.Mesh(new THREE.TorusGeometry(0.20, 0.016, 4, 10), innerRobeMat);
+  wrinkle1.position.set(0, 0.11, 0);
+  wrinkle1.rotation.x = Math.PI / 2;
+  hatGroup.add(wrinkle1);
+
+  // Segment 2 (mid-lower crease tilted backward and left)
+  const hatCone2 = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.19, 0.22, 8), robeMat);
+  hatCone2.position.set(-0.02, 0.38, -0.03);
+  hatCone2.rotation.x = -0.22;
+  hatCone2.rotation.z = -0.14;
+  hatGroup.add(hatCone2);
+
+  // Crease wrinkle 2
+  const wrinkle2 = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.015, 4, 10), innerRobeMat);
+  wrinkle2.position.set(-0.01, 0.29, -0.01);
+  wrinkle2.rotation.x = Math.PI / 2 - 0.1;
+  hatGroup.add(wrinkle2);
+
+  // Segment 3 (mid-upper sag fold S-curving forward and right)
+  const hatCone3 = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.14, 0.22, 8), robeMat);
+  hatCone3.position.set(0.02, 0.56, 0.01);
+  hatCone3.rotation.x = 0.25;
+  hatCone3.rotation.z = 0.12;
+  hatGroup.add(hatCone3);
+
+  // Segment 4 (drooping tip curving down and backward)
+  const hatTip = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.25, 7), robeMat);
+  hatTip.position.set(0.01, 0.73, -0.06);
+  hatTip.rotation.x = -0.38;
+  hatTip.rotation.z = -0.25;
+  hatGroup.add(hatTip);
+
+  group.add(hatGroup);
+
+  // ── 3. Left Arm & Floating Spellcasting Orb (Active Magic Off-Hand) ──
+  // Upper arm: elevated forward and slightly upward
+  const armLeftGeo = new THREE.CylinderGeometry(0.08, 0.09, 0.26, 6);
+  const leftUpperArm = new THREE.Mesh(armLeftGeo, innerRobeMat);
+  leftUpperArm.position.set(-0.34, 1.04, 0.08);
+  leftUpperArm.rotation.z = 0.55;
+  leftUpperArm.rotation.x = 0.35;
+  group.add(leftUpperArm);
+
+  // Wide flared bell sleeve (expanding forward)
+  const sleeveLeftGeo = new THREE.CylinderGeometry(0.18, 0.09, 0.34, 7);
+  const leftSleeve = new THREE.Mesh(sleeveLeftGeo, robeMat);
+  leftSleeve.position.set(-0.46, 1.02, 0.22);
+  leftSleeve.rotation.x = 1.15; // points forward and up
+  leftSleeve.rotation.z = 0.30;
   group.add(leftSleeve);
 
-  const rightSleeve = new THREE.Mesh(sleeveGeo, robeMat);
-  rightSleeve.position.set(0.32, 0.85, 0.05);
-  rightSleeve.rotation.z = -0.6;
-  rightSleeve.rotation.x = -0.15;
-  group.add(rightSleeve);
+  const sleeveLeftTrim = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.016, 4, 8), goldTrimMat);
+  sleeveLeftTrim.position.set(-0.46, 1.02, 0.22);
+  sleeveLeftTrim.rotation.x = 1.15;
+  sleeveLeftTrim.rotation.z = 0.30;
+  group.add(sleeveLeftTrim);
 
-  // Hand (right, holding staff)
-  const handGeo = new THREE.SphereGeometry(0.06, 6, 6);
-  const rightHand = new THREE.Mesh(handGeo, skinMat);
-  rightHand.position.set(0.42, 0.6, 0.12);
-  group.add(rightHand);
+  // Open palm hand pointing upward
+  const handGeo = new THREE.SphereGeometry(0.055, 6, 6);
+  const leftHand = new THREE.Mesh(handGeo, skinMat);
+  leftHand.position.set(-0.48, 1.05, 0.38);
+  group.add(leftHand);
 
-  // Staff (tall wooden pole + crystal orb)
-  const staffGroup = new THREE.Group();
+  // Floating Spell Energy Orb (hovering above open palm)
+  const spellGroup = new THREE.Group();
+  spellGroup.position.set(-0.48, 1.24, 0.38);
 
-  const poleGeo = new THREE.CylinderGeometry(0.025, 0.035, 1.6, 6);
-  const pole = new THREE.Mesh(poleGeo, staffMat);
-  pole.position.set(0, 0.8, 0);
-  staffGroup.add(pole);
+  // Glowing translucent cyan/violet core
+  const spellCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.08, 1), spellOrbMat);
+  spellCore.userData.isSpellCore = true;
+  spellGroup.add(spellCore);
 
-  // Crystal orb (glowing)
-  const crystalGeo = new THREE.OctahedronGeometry(0.12, 0);
-  const crystal = new THREE.Mesh(crystalGeo, crystalMat);
-  crystal.position.set(0, 1.65, 0);
-  crystal.rotation.y = Math.PI / 4;
-  staffGroup.add(crystal);
+  // Inner energy octahedron (counter-rotating)
+  const spellInner = new THREE.Mesh(new THREE.OctahedronGeometry(0.05, 0), crystalMat);
+  spellInner.userData.isSpellInner = true;
+  spellGroup.add(spellInner);
 
-  // Crystal glow point light
-  const crystalLight = new THREE.PointLight(0x818cf8, 2.5, 3);
-  crystalLight.position.set(0, 1.65, 0);
-  staffGroup.add(crystalLight);
+  // Magenta Orbital Energy Ring 1
+  const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.012, 4, 16), spellRingMat);
+  ring1.rotation.x = Math.PI / 3;
+  ring1.userData.isSpellRing1 = true;
+  spellGroup.add(ring1);
 
-  // Staff cradle (holding crystal)
-  const cradleGeo = new THREE.TorusGeometry(0.09, 0.015, 4, 6);
-  const cradle = new THREE.Mesh(cradleGeo, staffMat);
-  cradle.position.set(0, 1.58, 0);
-  cradle.rotation.x = Math.PI / 2;
-  staffGroup.add(cradle);
+  // Cyan Orbital Energy Ring 2
+  const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.010, 4, 16), spellOrbMat);
+  ring2.rotation.y = Math.PI / 4;
+  ring2.userData.isSpellRing2 = true;
+  spellGroup.add(ring2);
 
-  staffGroup.position.set(0.44, 0, 0.12);
-  staffGroup.rotation.z = -0.06;
-  group.add(staffGroup);
-
-  // Floating spell runes (orbiting particles)
-  for (let i = 0; i < 3; i++) {
-    const runeGeo = new THREE.SphereGeometry(0.025, 4, 4);
-    const runeMat = new THREE.MeshStandardMaterial({
-      color: 0xaa88ff,
-      emissive: 0x8866ff,
-      emissiveIntensity: 1.0,
-      transparent: true,
-      opacity: 0.7,
-      flatShading: true,
-    });
-    const rune = new THREE.Mesh(runeGeo, runeMat);
-    const angle = (i / 3) * Math.PI * 2;
-    rune.position.set(Math.cos(angle) * 0.5, 0.9, Math.sin(angle) * 0.5);
-    rune.userData.orbitAngle = angle;
-    rune.userData.orbitSpeed = 0.8 + i * 0.2;
-    rune.userData.orbitRadius = 0.5;
-    rune.userData.isRune = true;
-    group.add(rune);
+  // Swirling energy particle motes around orb
+  for (let i = 0; i < 4; i++) {
+    const mote = new THREE.Mesh(new THREE.OctahedronGeometry(0.02, 0), i % 2 === 0 ? spellOrbMat : spellRingMat);
+    const angle = (i / 4) * Math.PI * 2;
+    mote.position.set(Math.cos(angle) * 0.16, Math.sin(angle * 2) * 0.04, Math.sin(angle) * 0.16);
+    mote.userData.isSpellMote = true;
+    mote.userData.moteAngle = angle;
+    mote.userData.moteSpeed = 2.0 + i * 0.4;
+    mote.userData.moteRadius = 0.16;
+    spellGroup.add(mote);
   }
 
+  // Soft flickering PointLight illuminating hand, sleeve, and beard
+  const spellLight = new THREE.PointLight(0x22d3ee, 2.6, 3.2);
+  spellGroup.add(spellLight);
+  group.add(spellGroup);
+
+  // ── 4. Right Arm & Gnarled Wooden Staff with Glowing Crystal Claw ──
+  const rightUpperArm = new THREE.Mesh(armLeftGeo, innerRobeMat);
+  rightUpperArm.position.set(0.36, 1.02, 0.05);
+  rightUpperArm.rotation.z = -0.32;
+  rightUpperArm.rotation.x = 0.22;
+  group.add(rightUpperArm);
+
+  const rightSleeve = new THREE.Mesh(sleeveLeftGeo, robeMat);
+  rightSleeve.position.set(0.44, 0.88, 0.16);
+  rightSleeve.rotation.x = 0.70;
+  rightSleeve.rotation.z = -0.25;
+  group.add(rightSleeve);
+
+  const sleeveRightTrim = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.015, 4, 8), goldTrimMat);
+  sleeveRightTrim.position.set(0.44, 0.88, 0.16);
+  sleeveRightTrim.rotation.x = 0.70;
+  sleeveRightTrim.rotation.z = -0.25;
+  group.add(sleeveRightTrim);
+
+  // Hand gripping the staff
+  const rightHand = new THREE.Mesh(handGeo, skinMat);
+  rightHand.position.set(0.50, 0.86, 0.26);
+  group.add(rightHand);
+
+  // Gnarled Crooked Staff Group
+  const staffGroup = new THREE.Group();
+  staffGroup.position.set(0.52, 0, 0.26);
+
+  // Staff Lower Segment (ground up to grip)
+  const poleLower = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.042, 0.92, 6), woodStaffMat);
+  poleLower.position.set(0, 0.38, 0);
+  poleLower.rotation.z = 0.04;
+  staffGroup.add(poleLower);
+
+  // Staff Mid Segment (crooked near hand grip with wooden knot branch)
+  const poleMid = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.032, 0.65, 6), woodStaffMat);
+  poleMid.position.set(0.02, 0.98, -0.01);
+  poleMid.rotation.z = -0.05;
+  staffGroup.add(poleMid);
+
+  // Wooden branch knot
+  const branchKnot = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.09, 4), woodStaffMat);
+  branchKnot.position.set(0.06, 0.84, -0.02);
+  branchKnot.rotation.z = -Math.PI / 3;
+  staffGroup.add(branchKnot);
+
+  // Staff Upper Segment (ascending towards head)
+  const poleUpper = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.035, 0.68, 6), woodStaffMat);
+  poleUpper.position.set(-0.01, 1.55, 0.01);
+  poleUpper.rotation.z = 0.03;
+  staffGroup.add(poleUpper);
+
+  // Staff Head: Golden Claw / Cage holding Crystal
+  const cageBase = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.016, 5, 10), staffCageMat);
+  cageBase.position.set(-0.01, 1.84, 0.01);
+  cageBase.rotation.x = Math.PI / 2;
+  staffGroup.add(cageBase);
+
+  // 4 Golden Claw prongs enclosing the crystal
+  for (let i = 0; i < 4; i++) {
+    const prong = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.24, 0.03), staffCageMat);
+    const angle = (i / 4) * Math.PI * 2;
+    prong.position.set(-0.01 + Math.cos(angle) * 0.065, 1.94, 0.01 + Math.sin(angle) * 0.065);
+    prong.rotation.y = angle;
+    prong.rotation.z = (i % 2 === 0 ? 1 : -1) * 0.12;
+    staffGroup.add(prong);
+  }
+
+  // Large Multifaceted Translucent Crystal Jewel
+  const crystalGeo = new THREE.OctahedronGeometry(0.12, 0);
+  const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+  crystal.position.set(-0.01, 1.96, 0.01);
+  crystal.scale.set(0.85, 1.85, 0.85); // elongated crystal
+  crystal.userData.isStaffCrystal = true;
+  staffGroup.add(crystal);
+
+  // Internal Crystal PointLight
+  const crystalLight = new THREE.PointLight(0xa855f7, 2.8, 3.8);
+  crystalLight.position.set(-0.01, 1.96, 0.01);
+  staffGroup.add(crystalLight);
+
+  // Floating Ascending Spark Motes from Staff Crystal
+  for (let i = 0; i < 4; i++) {
+    const mote = new THREE.Mesh(new THREE.OctahedronGeometry(0.022, 0), i % 2 === 0 ? crystalMat : spellOrbMat);
+    mote.userData.isStaffMote = true;
+    mote.userData.moteAngle = (i / 4) * Math.PI * 2;
+    mote.userData.moteSpeed = 1.4 + i * 0.3;
+    mote.userData.baseY = 2.08 + i * 0.08;
+    staffGroup.add(mote);
+  }
+
+  group.add(staffGroup);
+
+  // Enable shadow casting & receiving across all meshes
   group.traverse((obj) => {
     if (obj instanceof THREE.Mesh) {
       obj.castShadow = true;
@@ -1014,18 +1477,22 @@ export function HeroModelViewer({ heroId }: HeroModelViewerProps) {
     camera.position.set(0, 1.15, 3.8);
     camera.lookAt(0, 0.72, 0);
 
+    const isWarrior = hId === 'warrior';
+
     // ── Scene Lighting & Visual Balance ──
-    // 1. Hemisphere Light (Fix dark silhouette: white sky + dark slate ground at 1.2 intensity)
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x1e293b, 1.2);
+    // 1. Hemisphere Light (Amplified for Mage: white sky + dark indigo ground 0x111827 at 1.4 intensity)
+    const hemiGroundColor = isWarrior ? 0x1e293b : 0x111827;
+    const hemiIntensity = isWarrior ? 1.2 : 1.4;
+    const hemiLight = new THREE.HemisphereLight(0xffffff, hemiGroundColor, hemiIntensity);
     hemiLight.position.set(0, 10, 0);
     scene.add(hemiLight);
 
     // 2. Ambient light (subtle fill)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+    const ambientLight = new THREE.AmbientLight(0xffffff, isWarrior ? 0.25 : 0.35);
     scene.add(ambientLight);
 
-    // 3. Key Light (Directional, hits from top-front-right, casts shadow)
-    const keyLight = new THREE.DirectionalLight(0xfff8ee, 1.8);
+    // 3. Key Light (Directional, hits from top-front-right, casts shadow onto pedestal)
+    const keyLight = new THREE.DirectionalLight(0xfff8ee, isWarrior ? 1.8 : 1.7);
     keyLight.position.set(3.2, 5.0, 3.5);
     keyLight.castShadow = true;
     keyLight.shadow.mapSize.set(1024, 1024);
@@ -1039,18 +1506,27 @@ export function HeroModelViewer({ heroId }: HeroModelViewerProps) {
     keyLight.shadow.radius = 3;
     scene.add(keyLight);
 
-    // 4. Rim Light: Amber/warm-orange point light behind the hero (0xf59e0b)
-    const isWarrior = hId === 'warrior';
-    const rimColor = isWarrior ? 0xf59e0b : 0xa855f7;
-    const rimLight = new THREE.PointLight(rimColor, 3.6, 7.5);
-    rimLight.position.set(0, 1.6, -1.8);
+    // 4. Rim Light:
+    // Warrior: Amber point light behind hero (0xf59e0b)
+    // Mage: Dramatic cyan back/rim light catching edge of hat, cape, and staff from behind-left (0x06b6d4, 2.5, 5)
+    const rimLight = isWarrior
+      ? new THREE.PointLight(0xf59e0b, 3.6, 7.5)
+      : new THREE.PointLight(0x06b6d4, 2.5, 5.0);
+    rimLight.position.set(isWarrior ? 0 : -1.4, isWarrior ? 1.6 : 2.0, isWarrior ? -1.8 : -1.6);
     rimLight.castShadow = false;
     scene.add(rimLight);
 
     // 5. Front fill light (soft cool fill from front-left)
-    const fillLight = new THREE.DirectionalLight(0x94a3b8, 0.45);
+    const fillLight = new THREE.DirectionalLight(isWarrior ? 0x94a3b8 : 0x818cf8, 0.45);
     fillLight.position.set(-3.0, 2.0, 3.0);
     scene.add(fillLight);
+
+    // 6. Dedicated soft point light in front of the mage's face to cast illumination directly under the brim (0x38bdf8, 1.2)
+    if (!isWarrior) {
+      const faceFillLight = new THREE.PointLight(0x38bdf8, 1.2, 2.5);
+      faceFillLight.position.set(0, 1.30, 0.65);
+      scene.add(faceFillLight);
+    }
 
     // ── Ground Pedestal ──
     const groundGeo = new THREE.CylinderGeometry(1.2, 1.4, 0.12, 32);
@@ -1069,11 +1545,11 @@ export function HeroModelViewer({ heroId }: HeroModelViewerProps) {
     // Pedestal edge ring
     const edgeGeo = new THREE.TorusGeometry(1.3, 0.025, 8, 32);
     const edgeMat = new THREE.MeshStandardMaterial({
-      color: isWarrior ? 0x8b4513 : 0x443399,
+      color: isWarrior ? 0x8b4513 : 0x7c3aed,
       roughness: 0.4,
       metalness: 0.6,
-      emissive: isWarrior ? 0x442200 : 0x221155,
-      emissiveIntensity: 0.4,
+      emissive: isWarrior ? 0x442200 : 0x4c1d95,
+      emissiveIntensity: 0.5,
       flatShading: true,
     });
     const edge = new THREE.Mesh(edgeGeo, edgeMat);
@@ -1179,16 +1655,36 @@ export function HeroModelViewer({ heroId }: HeroModelViewerProps) {
         // Subtle idle bobbing (breathing)
         state.heroGroup.position.y = Math.sin(elapsed * 1.6) * 0.03;
 
-        // Animate mage runes if present
-        state.heroGroup.children.forEach((child) => {
-          if (child.userData.isRune) {
-            const a = child.userData.orbitAngle + elapsed * child.userData.orbitSpeed;
-            const r = child.userData.orbitRadius;
-            child.position.set(
-              Math.cos(a) * r,
-              0.9 + Math.sin(elapsed * 2 + child.userData.orbitAngle) * 0.08,
-              Math.sin(a) * r
-            );
+        // Dynamic Magical VFX animation (Spell Orb, Rings, Staff Motes)
+        state.heroGroup.traverse((child) => {
+          if (child.userData.isSpellCore) {
+            child.rotation.y = elapsed * 1.8;
+            child.rotation.x = elapsed * 1.2;
+            const s = 1.0 + Math.sin(elapsed * 4.5) * 0.07;
+            child.scale.set(s, s, s);
+          } else if (child.userData.isSpellInner) {
+            child.rotation.y = -elapsed * 2.4;
+            child.rotation.z = elapsed * 1.6;
+          } else if (child.userData.isSpellRing1) {
+            child.rotation.z = elapsed * 2.8;
+          } else if (child.userData.isSpellRing2) {
+            child.rotation.x = elapsed * 2.2;
+            child.rotation.y = elapsed * 1.9;
+          } else if (child.userData.isSpellMote) {
+            const a = child.userData.moteAngle + elapsed * child.userData.moteSpeed;
+            const r = child.userData.moteRadius;
+            child.position.x = Math.cos(a) * r;
+            child.position.z = Math.sin(a) * r;
+            child.position.y = Math.sin(elapsed * 3.5 + child.userData.moteAngle) * 0.04;
+          } else if (child.userData.isStaffCrystal) {
+            const pulse = 1.0 + Math.sin(elapsed * 2.8) * 0.035;
+            child.scale.set(0.85 * pulse, 1.85 * pulse, 0.85 * pulse);
+          } else if (child.userData.isStaffMote) {
+            const t = (elapsed * child.userData.moteSpeed) % 1.0;
+            const a = child.userData.moteAngle + elapsed * 1.5;
+            child.position.x = -0.01 + Math.cos(a) * 0.07;
+            child.position.z = 0.01 + Math.sin(a) * 0.07;
+            child.position.y = child.userData.baseY + t * 0.22;
           }
         });
       }
