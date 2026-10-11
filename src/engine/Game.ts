@@ -22,6 +22,7 @@ export class Game {
   keys: Record<string, boolean> = {};
   lastTime: number = 0;
   animationId: number = 0;
+  isRunning: boolean = false;
   
   setS: (s: Snapshot | null) => void;
   setR: (r: Result | null) => void;
@@ -50,17 +51,27 @@ export class Game {
   targetFps: number = 144;
   lastFrameTime: number = 0;
 
+  private onKeyDown = (e: KeyboardEvent) => {
+    if (this.isRunning) this.keys[e.key] = true;
+  };
+  private onKeyUp = (e: KeyboardEvent) => {
+    if (this.isRunning) this.keys[e.key] = false;
+  };
+  private onResize = () => {
+    this.resize();
+  };
+
   constructor(host: HTMLDivElement, setS: any, setR: any) {
     this.canvas = document.createElement("canvas");
     this.ctx = this.canvas.getContext("2d")!;
     host.appendChild(this.canvas);
     this.setS = setS; this.setR = setR;
     
-    window.addEventListener("keydown", (e) => this.keys[e.key] = true);
-    window.addEventListener("keyup", (e) => this.keys[e.key] = false);
+    window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keyup", this.onKeyUp);
 
     this.resize();
-    window.addEventListener("resize", () => this.resize());
+    window.addEventListener("resize", this.onResize);
     
     this.abilities = new AbilitiesManager(this);
     this.overlay = new Overlay(this);
@@ -73,6 +84,7 @@ export class Game {
   }
 
   start(characterType: string) {
+    this.isRunning = true;
     this.overlay.show();
     if (characterType === 'mage') this.player = new Mage();
     else this.player = new Warrior();
@@ -205,6 +217,7 @@ export class Game {
   }
 
   loop = (time: number) => {
+    if (!this.isRunning) return;
     this.animationId = requestAnimationFrame(this.loop);
     
     if (this.targetFps < 144) {
@@ -405,8 +418,46 @@ export class Game {
     });
   }
 
+  stop() {
+    this.isRunning = false;
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = 0;
+    }
+
+    this.player = null;
+    this.enemies = [];
+    this.projectiles = [];
+    this.enemyProjectiles = [];
+    this.effects = [];
+    this.screenShake = null;
+    this.keys = {};
+
+    this.isPaused = false;
+    this.isGameOver = false;
+    this.isLevelingUp = false;
+    this.choices = [];
+    this.hitStopTimer = 0;
+    this.kills = 0;
+    this.gameTime = 0;
+    this.wave = 1;
+    this.waveTimer = 0;
+    this.xp = 0;
+
+    this.setS(null);
+    this.setR(null);
+
+    this.overlay.hide();
+
+    // Clear canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
   destroy() {
-    cancelAnimationFrame(this.animationId);
+    this.stop();
+    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("resize", this.onResize);
     this.canvas.remove();
     this.overlay.destroy();
   }

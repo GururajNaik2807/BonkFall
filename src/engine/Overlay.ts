@@ -64,6 +64,7 @@ export class Overlay {
 
   // Update called every frame
   update(time: number) {
+    if (!this.game.isRunning || !this.game.player) return;
     this.frameCount++;
     
     // FPS throttled to ~500ms
@@ -167,6 +168,7 @@ export class Overlay {
   hide() {
     this.minimapCanvas.style.display = 'none';
     this.fpsElement.style.display = 'none';
+    this.minimapCtx.clearRect(0, 0, this.minimapCanvas.width, this.minimapCanvas.height);
   }
 
   destroy() {

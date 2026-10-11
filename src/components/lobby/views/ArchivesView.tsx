@@ -1,8 +1,11 @@
 export function ArchivesView() {
   return (
-    <div className="view-archives view-fade-in">
-      <h2>Archives & Records</h2>
-      <div className="archives-placeholder">
+    <div className="view-archives view-fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div className="settings-header">
+        <h2>Archives & Records</h2>
+      </div>
+      <div className="settings-scroll-area">
+        <div className="archives-placeholder">
         <div className="stats-box">
           <h3>Lifetime Stats</h3>
           <div className="stats-grid">
@@ -37,6 +40,7 @@ export function ArchivesView() {
               <p>Reach Wave 10. (Locked)</p>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

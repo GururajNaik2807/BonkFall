@@ -1,9 +1,12 @@
 export function SettingsView({ targetFps, onSetFps }: { targetFps: number, onSetFps: (fps: number) => void }) {
   return (
-    <div className="view-settings view-fade-in">
-      <h2>Game Settings</h2>
-      <div className="settings-grid">
-        <div className="settings-panel">
+    <div className="view-settings view-fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div className="settings-header">
+        <h2>Game Settings</h2>
+      </div>
+      <div className="settings-scroll-area">
+        <div className="settings-grid">
+          <div className="settings-panel">
           <h3>Audio</h3>
           <div className="set-row">
             <span>Master Volume</span>
@@ -50,6 +53,7 @@ export function SettingsView({ targetFps, onSetFps }: { targetFps: number, onSet
           <p className="control-help">Movement: <b>W A S D</b> or <b>Arrow Keys</b></p>
           <p className="control-help">Attack: <b>Auto (Proximity)</b></p>
           <p className="control-help">Pause: <b>P</b> or <b>ESC</b></p>
+          </div>
         </div>
       </div>
     </div>

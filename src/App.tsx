@@ -27,21 +27,34 @@ export default function App() {
     setStarted(true);
   };
 
+  const returnToMainMenu = () => {
+    game.current?.stop();
+    setR(null);
+    setS(null);
+    setStarted(false);
+    setSelectedHero(null);
+  };
+
   const runAgain = () => {
     if (selectedHero) {
       game.current?.start(selectedHero);
       setR(null);
     } else {
-      setStarted(false);
+      returnToMainMenu();
     }
   };
 
-  const changeHero = () => {
-    setR(null);
-    setStarted(false);
-    setSelectedHero(null);
-    game.current?.overlay.hide();
-  };
+  // Keyboard shortcut for pausing during gameplay
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!started || !game.current) return;
+      if (e.key === "Escape" || e.key === "p" || e.key === "P") {
+        game.current.pause();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [started]);
 
   return (
     <main className="app">
@@ -52,9 +65,16 @@ export default function App() {
         />
       )}
 
-      {s && started && <HUD s={s} game={game.current} onReturnToMenu={changeHero} />}
+      {s && started && (
+        <HUD 
+          s={s} 
+          game={game.current} 
+          heroName={selectedHero === "mage" ? "Archmage" : "Iron Vanguard"}
+          onReturnToMenu={returnToMainMenu} 
+        />
+      )}
 
-      {s?.choices && s.choices.length > 0 && (
+      {s?.choices && s.choices.length > 0 && started && (
         <div className="shade">
           <div className="power">
             <small>LEVEL {s.level}</small>
@@ -83,25 +103,42 @@ export default function App() {
             </div>
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
               <button onClick={runAgain}>RUN AGAIN</button>
-              <button onClick={changeHero}>CHANGE HERO</button>
+              <button onClick={returnToMainMenu}>RETURN TO MENU</button>
             </div>
           </div>
         </div>
       )}
 
-      <div ref={host} className="game" />
+      <div 
+        ref={host} 
+        className="game" 
+        style={{ 
+          display: started ? 'block' : 'none',
+          pointerEvents: started ? 'auto' : 'none'
+        }} 
+      />
     </main>
   );
 }
 
-function HUD({ s, game, onReturnToMenu }: { s: Snapshot; game: Game | null, onReturnToMenu: () => void }) {
+function HUD({ 
+  s, 
+  game, 
+  heroName,
+  onReturnToMenu 
+}: { 
+  s: Snapshot; 
+  game: Game | null; 
+  heroName?: string;
+  onReturnToMenu: () => void;
+}) {
   return (
     <>
       <div className="hud">
         <div className="left">
-          <div className="portrait"><div className="minihero">⚔</div></div>
+          <div className="portrait"><div className="minihero">{heroName === "Archmage" ? "🔮" : "⚔"}</div></div>
           <div>
-            <b>Wanderer</b>
+            <b>{heroName || "Wanderer"}</b>
             <div className="health"><i style={{ width: `${s.hp / s.maxHp * 100}%` }} /></div>
             <div className="xp"><i style={{ width: `${s.xp / s.nextXp * 100}%` }} /></div>
           </div>
@@ -114,8 +151,11 @@ function HUD({ s, game, onReturnToMenu }: { s: Snapshot; game: Game | null, onRe
         <div className="right">
           <div>💀 {s.kills}</div>
           <div>⚔ POWER {s.powerLevel}</div>
-          <button onClick={() => game?.pause()} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', fontWeight: 'bold' }}>
-            <span>⏸</span> PAUSE
+          <button 
+            onClick={() => game?.pause()} 
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', fontWeight: 'bold' }}
+          >
+            <span>{s.paused ? '▶' : '⏸'}</span> {s.paused ? 'RESUME' : 'PAUSE'}
           </button>
         </div>
       </div>
@@ -130,10 +170,7 @@ function HUD({ s, game, onReturnToMenu }: { s: Snapshot; game: Game | null, onRe
           </div>
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
             <button onClick={() => game?.pause()}>RESUME</button>
-            <button onClick={() => {
-              game?.pause(); // unpause the loop first
-              onReturnToMenu(); 
-            }}>RETURN TO MENU</button>
+            <button onClick={onReturnToMenu}>RETURN TO MENU</button>
           </div>
         </div>
       )}
