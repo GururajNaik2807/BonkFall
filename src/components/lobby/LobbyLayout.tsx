@@ -3,6 +3,7 @@ import { HomePlayView } from './views/HomePlayView';
 import { HeroSelectView } from './views/HeroSelectView';
 import { SettingsView } from './views/SettingsView';
 import { ArchivesView } from './views/ArchivesView';
+import { HeroShowcase } from './HeroShowcase';
 import { HEROES } from '../../config/characters';
 import { useEffect } from 'react';
 import './lobby.css';
@@ -29,11 +30,14 @@ export function LobbyLayout({ onStartGame, onSetFps }: { onStartGame: (id: strin
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         onStartGame(nav.selectedCharacterId);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        nav.setSelectedCharacterId(nav.selectedCharacterId === 'warrior' ? 'mage' : 'warrior');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nav.activeTab, nav.selectedCharacterId, onStartGame]);
+  }, [nav.activeTab, nav.selectedCharacterId, onStartGame, nav.setSelectedCharacterId]);
 
   return (
     <div className="lobby-spa-container">
@@ -83,42 +87,11 @@ export function LobbyLayout({ onStartGame, onSetFps }: { onStartGame: (id: strin
 
         {/* Region B: Main Hero Presentation (Only show for Play/Heroes) */}
         {['play', 'heroes'].includes(nav.activeTab) && (
-          <div className="lobby-region-hero">
-            <div className="hero-presentation-container">
-              <div className="stone-pedestal-frame">
-                <img key={activeHero.id} src={activeHero.asset.src} alt={activeHero.name} className="hero-sprite" />
-                <div className="hero-ground" />
-              </div>
-            </div>
-            
-            <div className="hero-nameplate">
-              <h2>{activeHero.name}</h2>
-              <p>{activeHero.title}</p>
-            </div>
-
-            {nav.activeTab === 'heroes' && (
-              <div className="active-hero-stats" style={{ marginTop: '20px', width: '100%', maxWidth: '300px' }}>
-                <div className="stat-row">
-                  <span>Health</span>
-                  <div className="bar"><div className="fill" style={{ width: `${(activeHero.stats.health / 150) * 100}%` }} /></div>
-                  <span className="val">{activeHero.stats.health}</span>
-                </div>
-                <div className="stat-row">
-                  <span>Speed</span>
-                  <div className="bar"><div className="fill" style={{ width: `${activeHero.stats.speed}%` }} /></div>
-                  <span className="val">{activeHero.stats.speed}</span>
-                </div>
-                <div className="stat-row">
-                  <span>Damage</span>
-                  <div className="bar"><div className="fill" style={{ width: `${(activeHero.stats.damage / 30) * 100}%` }} /></div>
-                  <span className="val">{activeHero.stats.damage}</span>
-                </div>
-                <p style={{ margin: '15px 0 0 0', fontSize: '14px', color: '#D5DDC9' }}>
-                  <b>Perk:</b> {activeHero.startingPerk}
-                </p>
-              </div>
-            )}
-          </div>
+          <HeroShowcase 
+            activeHero={activeHero}
+            onSelectHero={nav.setSelectedCharacterId}
+            showStats={nav.activeTab === 'heroes'}
+          />
         )}
 
         {/* Region C: Primary Action / Content */}
@@ -127,6 +100,7 @@ export function LobbyLayout({ onStartGame, onSetFps }: { onStartGame: (id: strin
             <HomePlayView 
               activeHero={activeHero}
               onStart={() => onStartGame(nav.selectedCharacterId)}
+              onSelectHero={nav.setSelectedCharacterId}
             />
           )}
           {nav.activeTab === 'heroes' && (
