@@ -822,29 +822,61 @@ function createMageModel(): THREE.Group {
     flatShading: true,
   });
 
-  const beardWhiteMat = new THREE.MeshStandardMaterial({
-    color: 0xf1f5f9, // Clean white beard & hair
+  const facePlateMat = new THREE.MeshStandardMaterial({
+    color: 0xf1ede4, // Ivory / pale flesh tone face plate under hat brim
+    roughness: 0.70,
+    metalness: 0.04,
+    flatShading: true,
+  });
+
+  const scleraMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff, // White sclera / eyeball
+    roughness: 0.35,
+    metalness: 0.0,
+    flatShading: true,
+  });
+
+  const pupilMat = new THREE.MeshBasicMaterial({
+    color: 0x111111, // Pitch-black pupils that never wash out in lighting
+  });
+
+  const irisRimMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8, // Faint arcane cyan edge framing pupils
+  });
+
+  const mustacheMat = new THREE.MeshStandardMaterial({
+    color: 0xf8fafc, // Crisp off-white mustache wings
+    roughness: 0.8,
+    metalness: 0.02,
+    flatShading: true,
+  });
+
+  const beardTier1Mat = new THREE.MeshStandardMaterial({
+    color: 0xf1f5f9, // Crisp white upper tier
     roughness: 0.85,
     metalness: 0.02,
     flatShading: true,
   });
 
-  const beardGrayMat = new THREE.MeshStandardMaterial({
-    color: 0xe2e8f0, // Soft gray contrast layer for beard
+  const beardTier2Mat = new THREE.MeshStandardMaterial({
+    color: 0xe2e8f0, // Soft gray mid tier
+    roughness: 0.85,
+    metalness: 0.02,
+    flatShading: true,
+  });
+
+  const beardTier3Mat = new THREE.MeshStandardMaterial({
+    color: 0xcfd8dc, // Slate gray lower tier for depth separation
     roughness: 0.85,
     metalness: 0.02,
     flatShading: true,
   });
 
   const skinMat = new THREE.MeshStandardMaterial({
-    color: 0xfdba74, // Stylized tan/skin tone for nose and face
+    color: 0xfdba74, // Stylized tan/skin tone for cranium core
     roughness: 0.75,
     metalness: 0.05,
     flatShading: true,
-  });
-
-  const eyeMat = new THREE.MeshBasicMaterial({
-    color: 0x00f2ff, // Intensely emissive cyan (MeshBasicMaterial for vibrant glow in shadows)
   });
 
   const crystalMat = new THREE.MeshStandardMaterial({
@@ -1034,113 +1066,165 @@ function createMageModel(): THREE.Group {
   rightShoe.position.set(0.13, -0.07, 0.04);
   group.add(rightShoe);
 
-  // ── 2. Head, Visible Face, Cascading White Beard & Wrinkled Wizard Hat ──
-  // Head core (face)
+  // ── 2. Head, Defined Face Plate, Eyes with Black Pupils, Layered Beard & Hat ──
+  const headGroup = new THREE.Group();
+  headGroup.position.set(0, 1.32, 0.04);
+  group.add(headGroup);
+
+  // Head cranium core
   const headGeo = new THREE.SphereGeometry(0.18, 8, 8);
   const head = new THREE.Mesh(headGeo, skinMat);
-  head.position.set(0, 1.32, 0.04);
-  group.add(head);
+  headGroup.add(head);
 
-  // Defined Brow Ridge (tan/skin tone right under hat brim shadow)
-  const browRidgeGeo = new THREE.BoxGeometry(0.24, 0.045, 0.10);
-  const browRidge = new THREE.Mesh(browRidgeGeo, skinMat);
-  browRidge.position.set(0, 1.36, 0.17);
-  browRidge.rotation.x = -0.06;
-  group.add(browRidge);
+  // Defined Eye Socket / Face Plate under the hat brim using ivory/pale flesh tone (0xf1ede4)
+  const facePlateGeo = new THREE.BoxGeometry(0.24, 0.11, 0.10);
+  const facePlate = new THREE.Mesh(facePlateGeo, facePlateMat);
+  facePlate.position.set(0, 0.015, 0.10);
+  headGroup.add(facePlate);
 
-  // Prominent Stylized Low-Poly Nose
-  const noseGeo = new THREE.BoxGeometry(0.055, 0.09, 0.08);
-  const nose = new THREE.Mesh(noseGeo, skinMat);
-  nose.position.set(0, 1.285, 0.22);
-  nose.rotation.x = 0.20; // jutting forward characterfully
-  group.add(nose);
+  // Cheeks / temples framing face
+  const cheekLeft = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.09, 0.09), facePlateMat);
+  cheekLeft.position.set(-0.11, -0.01, 0.11);
+  cheekLeft.rotation.y = -0.22;
+  headGroup.add(cheekLeft);
 
-  // HIGHLY VISIBLE EYES: Intensely emissive cyan shapes (MeshBasicMaterial)
-  const eyeLeftGeo = new THREE.BoxGeometry(0.052, 0.028, 0.035);
-  const leftEye = new THREE.Mesh(eyeLeftGeo, eyeMat);
-  leftEye.position.set(-0.068, 1.335, 0.20);
-  leftEye.rotation.z = -0.15;
-  group.add(leftEye);
+  const cheekRight = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.09, 0.09), facePlateMat);
+  cheekRight.position.set(0.11, -0.01, 0.11);
+  cheekRight.rotation.y = 0.22;
+  headGroup.add(cheekRight);
 
-  const eyeRightGeo = new THREE.BoxGeometry(0.052, 0.028, 0.035);
-  const rightEye = new THREE.Mesh(eyeRightGeo, eyeMat);
-  rightEye.position.set(0.068, 1.335, 0.20);
-  rightEye.rotation.z = 0.15;
-  group.add(rightEye);
+  // Defined Brow Ridge (ivory/pale flesh tone projecting under hat brim)
+  const browRidgeGeo = new THREE.BoxGeometry(0.24, 0.038, 0.08);
+  const browRidge = new THREE.Mesh(browRidgeGeo, facePlateMat);
+  browRidge.position.set(0, 0.052, 0.145);
+  browRidge.rotation.x = -0.10;
+  headGroup.add(browRidge);
 
-  // Eye glow point light
-  const eyeLight = new THREE.PointLight(0x00f2ff, 0.8, 1.2);
-  eyeLight.position.set(0, 1.335, 0.25);
-  group.add(eyeLight);
+  // Prominent Stylized Low-Poly Nose (jutting forward characterfully)
+  const noseGeo = new THREE.BoxGeometry(0.052, 0.075, 0.07);
+  const nose = new THREE.Mesh(noseGeo, facePlateMat);
+  nose.position.set(0, -0.022, 0.190);
+  nose.rotation.x = 0.20;
+  headGroup.add(nose);
 
-  // Layered, Cascading Low-Poly Beard and Mustache (white & gray)
-  // Outward-Flaring Mustache Wings
-  const mustacheLeft = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.055, 0.08), beardWhiteMat);
-  mustacheLeft.position.set(-0.085, 1.23, 0.23);
-  mustacheLeft.rotation.z = -0.32;
+  // ── Visible Eyes with Sclera, Faint Cyan Iris Rim & Black Pupils ──
+  const eyeGroup = new THREE.Group();
+
+  const createEye = (isLeft: boolean) => {
+    const eye = new THREE.Group();
+    const xPos = isLeft ? -0.062 : 0.062;
+    const rotZ = isLeft ? -0.08 : 0.08;
+    const rotY = isLeft ? -0.10 : 0.10;
+
+    // Sclera (Eyeball) - White flat-shaded low-poly box positioned prominently under hat line
+    const scleraGeo = new THREE.BoxGeometry(0.054, 0.038, 0.026);
+    const sclera = new THREE.Mesh(scleraGeo, scleraMat);
+    eye.add(sclera);
+
+    // Faint Arcane Cyan Rim around pupil
+    const irisRimGeo = new THREE.BoxGeometry(0.032, 0.030, 0.009);
+    const irisRim = new THREE.Mesh(irisRimGeo, irisRimMat);
+    irisRim.position.set(0, 0, 0.012);
+    eye.add(irisRim);
+
+    // Distinct Black Pupil (MeshBasicMaterial 0x111111: never washes out or gets lost in lighting)
+    const pupilGeo = new THREE.BoxGeometry(0.022, 0.022, 0.012);
+    const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+    pupil.position.set(0, 0, 0.016);
+    eye.add(pupil);
+
+    eye.position.set(xPos, 0.018, 0.160);
+    eye.rotation.set(0, rotY, rotZ);
+    return eye;
+  };
+
+  eyeGroup.add(createEye(true));
+  eyeGroup.add(createEye(false));
+  headGroup.add(eyeGroup);
+
+  // ── Beard & Mustache Separation ──
+  // Distinct Mustache Wings flaring outward just under the nose, framing the beard
+  const mustacheLeft = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.052, 0.065), mustacheMat);
+  mustacheLeft.position.set(-0.082, -0.074, 0.190);
+  mustacheLeft.rotation.z = -0.36;
   mustacheLeft.rotation.y = -0.22;
-  group.add(mustacheLeft);
+  mustacheLeft.rotation.x = 0.10;
+  headGroup.add(mustacheLeft);
 
-  const mustacheRight = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.055, 0.08), beardWhiteMat);
-  mustacheRight.position.set(0.085, 1.23, 0.23);
-  mustacheRight.rotation.z = 0.32;
+  const mustacheRight = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.052, 0.065), mustacheMat);
+  mustacheRight.position.set(0.082, -0.074, 0.190);
+  mustacheRight.rotation.z = 0.36;
   mustacheRight.rotation.y = 0.22;
-  group.add(mustacheRight);
+  mustacheRight.rotation.x = 0.10;
+  headGroup.add(mustacheRight);
 
-  // Prominent Cascading Beard descending over the chest in multi-segmented layers
-  // Layer 1 (Upper chin / jaw fullness)
-  const beardLayer1 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.14), beardWhiteMat);
-  beardLayer1.position.set(0, 1.15, 0.24);
-  group.add(beardLayer1);
+  const mustacheCenter = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.03, 0.04), mustacheMat);
+  mustacheCenter.position.set(0, -0.062, 0.195);
+  headGroup.add(mustacheCenter);
 
-  // Layer 2 (Mid cascading fold with gray contrast)
-  const beardLayer2 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.17, 0.13), beardGrayMat);
-  beardLayer2.position.set(0, 1.00, 0.26);
-  group.add(beardLayer2);
+  // Main Beard extending downward in tiered angular facets with depth offsets
+  // Tier 1 (Upper chin / jaw fullness facet in clean white 0xf1f5f9)
+  const beardTier1 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.15, 0.12), beardTier1Mat);
+  beardTier1.position.set(0, -0.16, 0.20);
+  beardTier1.rotation.x = 0.06;
+  headGroup.add(beardTier1);
 
-  // Layer 3 (Lower cascading fold)
-  const beardLayer3 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.17, 0.11), beardWhiteMat);
-  beardLayer3.position.set(0, 0.86, 0.27);
-  group.add(beardLayer3);
+  // Tier 2 (Mid-chest cascading fold with gray contrast 0xe2e8f0 and depth step forward)
+  const beardTier2 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.16, 0.11), beardTier2Mat);
+  beardTier2.position.set(0, -0.30, 0.22);
+  beardTier2.rotation.x = -0.04;
+  headGroup.add(beardTier2);
 
-  // Layer 4 (Faceted pointed tip tapering over belt)
-  const beardTipGeo = new THREE.ConeGeometry(0.08, 0.28, 5);
-  const beardTip = new THREE.Mesh(beardTipGeo, beardWhiteMat);
-  beardTip.position.set(0, 0.70, 0.26);
-  beardTip.rotation.x = Math.PI - 0.12; // curve slightly forward
-  group.add(beardTip);
+  // Tier 3 (Lower chest drape facet in slate gray 0xcfd8dc with forward depth offset)
+  const beardTier3 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.15, 0.10), beardTier3Mat);
+  beardTier3.position.set(0, -0.44, 0.23);
+  beardTier3.rotation.x = -0.08;
+  headGroup.add(beardTier3);
 
-  // Side beard tufts (enhances 3/4 view silhouette)
-  const tuftLeft1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.08), beardGrayMat);
-  tuftLeft1.position.set(-0.13, 1.10, 0.22);
-  tuftLeft1.rotation.z = -0.20;
-  group.add(tuftLeft1);
+  // Pointed faceted tip tapering over belt
+  const beardTipGeo = new THREE.ConeGeometry(0.07, 0.22, 5);
+  const beardTip = new THREE.Mesh(beardTipGeo, beardTier2Mat);
+  beardTip.position.set(0, -0.58, 0.22);
+  beardTip.rotation.x = Math.PI - 0.10;
+  headGroup.add(beardTip);
 
-  const tuftRight1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.08), beardGrayMat);
-  tuftRight1.position.set(0.13, 1.10, 0.22);
-  tuftRight1.rotation.z = 0.20;
-  group.add(tuftRight1);
+  // Side beard tufts (enhances 3/4 view silhouette and depth)
+  const tuftLeft1 = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.14, 0.07), beardTier2Mat);
+  tuftLeft1.position.set(-0.12, -0.20, 0.16);
+  tuftLeft1.rotation.z = -0.22;
+  headGroup.add(tuftLeft1);
 
-  const tuftLeft2 = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.07), beardWhiteMat);
-  tuftLeft2.position.set(-0.10, 0.95, 0.24);
-  tuftLeft2.rotation.z = -0.15;
-  group.add(tuftLeft2);
+  const tuftRight1 = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.14, 0.07), beardTier2Mat);
+  tuftRight1.position.set(0.12, -0.20, 0.16);
+  tuftRight1.rotation.z = 0.22;
+  headGroup.add(tuftRight1);
 
-  const tuftRight2 = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.07), beardWhiteMat);
-  tuftRight2.position.set(0.10, 0.95, 0.24);
-  tuftRight2.rotation.z = 0.15;
-  group.add(tuftRight2);
+  const tuftLeft2 = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.13, 0.06), beardTier3Mat);
+  tuftLeft2.position.set(-0.09, -0.33, 0.18);
+  tuftLeft2.rotation.z = -0.16;
+  headGroup.add(tuftLeft2);
+
+  const tuftRight2 = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.13, 0.06), beardTier3Mat);
+  tuftRight2.position.set(0.09, -0.33, 0.18);
+  tuftRight2.rotation.z = 0.16;
+  headGroup.add(tuftRight2);
 
   // Hair locks framing sides of head
-  const hairLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.24, 0.14), beardWhiteMat);
-  hairLeft.position.set(-0.17, 1.25, 0.06);
+  const hairLeft = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.24, 0.12), beardTier1Mat);
+  hairLeft.position.set(-0.16, -0.06, 0.02);
   hairLeft.rotation.z = -0.12;
-  group.add(hairLeft);
+  headGroup.add(hairLeft);
 
-  const hairRight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.24, 0.14), beardWhiteMat);
-  hairRight.position.set(0.17, 1.25, 0.06);
+  const hairRight = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.24, 0.12), beardTier1Mat);
+  hairRight.position.set(0.16, -0.06, 0.02);
   hairRight.rotation.z = 0.12;
-  group.add(hairRight);
+  headGroup.add(hairRight);
+
+  // ── Face Illumination (Fix the dark brim shadow) ──
+  // Subtle local PointLight directly in front of and slightly below the face (color: 0xffffff, intensity: 0.85, distance: 2.0)
+  const faceLight = new THREE.PointLight(0xffffff, 0.85, 2.0);
+  faceLight.position.set(0, -0.04, 0.42);
+  headGroup.add(faceLight);
 
   // ── Dynamic Wrinkled Wizard's Hat with S-Curve & Wavy Brim ──
   const hatGroup = new THREE.Group();
@@ -1521,10 +1605,10 @@ export function HeroModelViewer({ heroId }: HeroModelViewerProps) {
     fillLight.position.set(-3.0, 2.0, 3.0);
     scene.add(fillLight);
 
-    // 6. Dedicated soft point light in front of the mage's face to cast illumination directly under the brim (0x38bdf8, 1.2)
+    // 6. Soft ambient fill for mage's upper robes
     if (!isWarrior) {
-      const faceFillLight = new THREE.PointLight(0x38bdf8, 1.2, 2.5);
-      faceFillLight.position.set(0, 1.30, 0.65);
+      const faceFillLight = new THREE.PointLight(0x818cf8, 0.25, 2.5);
+      faceFillLight.position.set(0, 1.30, 0.85);
       scene.add(faceFillLight);
     }
 
